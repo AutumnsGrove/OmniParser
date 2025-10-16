@@ -1,0 +1,98 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "omniparser"
+version = "1.0.0"
+description = "Universal document parser for multiple formats (EPUB, PDF, DOCX, HTML, Markdown, Text)"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "OmniParser Contributors"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Text Processing",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.10"
+dependencies = [
+    # Core
+    "pyyaml>=6.0",
+    "beautifulsoup4>=4.12.0",
+    "lxml>=5.0.0",
+
+    # EPUB
+    "ebooklib>=0.18",
+
+    # PDF
+    "PyMuPDF>=1.23.0",
+    "pytesseract>=0.3.10",
+
+    # DOCX
+    "python-docx>=1.0.0",
+
+    # HTML/URLs
+    "trafilatura>=1.6.0",
+    "readability-lxml>=0.8.0",
+    "requests>=2.31.0",
+
+    # Text processing
+    "ftfy>=6.1.0",
+    "chardet>=5.2.0",
+    "python-magic>=0.4.27",
+
+    # Utilities
+    "Pillow>=10.0.0",
+    "dataclasses-json>=0.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "mypy>=1.5.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/AutumnsGrove/omniparser"
+Repository = "https://github.com/AutumnsGrove/omniparser"
+Issues = "https://github.com/AutumnsGrove/omniparser/issues"
+Documentation = "https://omniparser.readthedocs.io"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/omniparser"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--strict-markers --strict-config --verbose --cov=omniparser"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[dependency-groups]
+dev = [
+    "black>=25.9.0",
+    "mypy>=1.18.2",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
+]
