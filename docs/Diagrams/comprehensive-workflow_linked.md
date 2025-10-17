@@ -37,7 +37,7 @@
 
 ### Intelligent Parser Selection Flow
 
-![[comprehensive-workflow_4_graph.png]]
+![[comprehensive-workflow_2_flowchart.png]]
 
 ---
 
@@ -45,7 +45,7 @@
 
 ### Detailed Processing Stages
 
-![[comprehensive-workflow_5_sequenceDiagram.png]]
+![[comprehensive-workflow_3_flowchart.png]]
 
 ---
 
@@ -53,11 +53,11 @@
 
 ### How Consumers Use OmniParser
 
-![[comprehensive-workflow_7_graph.png]]
+![[comprehensive-workflow_4_graph.png]]
 
 ### Specific Use Case: epub2tts Integration
 
-![[comprehensive-workflow_8_mindmap.png]]
+![[comprehensive-workflow_5_sequenceDiagram.png]]
 
 ---
 
@@ -65,187 +65,15 @@
 
 ### Expansion Phases (Beyond v1.0)
 
-![[comprehensive-workflow_9_graph.png]]
+![[comprehensive-workflow_6_gantt.png]]
 
 ### Parser Priority Matrix
 
-```mermaid
-graph TD
-    subgraph HighPriority["🔴 HIGH PRIORITY - v1.0-1.2"]
-        HP1[EPUB Parser<br/>✅ Phase 2.2 Active]
-        HP2[PDF Parser<br/>📄 Universal format]
-        HP3[DOCX Parser<br/>📝 Office docs]
-        HP4[HTML/Web Parser<br/>🌐 Web content]
-        HP5[Markdown Parser<br/>📝 Developer docs]
-        HP6[Text Parser<br/>📄 Fallback option]
-    end
-
-    subgraph MediumPriority["🟡 MEDIUM PRIORITY - v1.3-1.5"]
-        MP1[JSON Parser<br/>🔧 API data]
-        MP2[XML Parser<br/>🔧 Structured data]
-        MP3[RSS/Feed Parser<br/>📡 Syndication]
-        MP4[Twitter/X Parser<br/>🐦 Social media]
-        MP5[Reddit Parser<br/>🔴 Community content]
-        MP6[Archive Parser<br/>📦 Batch processing]
-        MP7[RTF Parser<br/>📄 Legacy docs]
-        MP8[ODT Parser<br/>📄 Open formats]
-    end
-
-    subgraph LowPriority["🟢 LOW PRIORITY - v1.6+"]
-        LP1[LinkedIn Parser<br/>💼 Professional content]
-        LP2[Medium Parser<br/>📰 Blog platform]
-        LP3[Google Docs Parser<br/>☁️ Cloud docs]
-        LP4[Notion Parser<br/>📝 Knowledge base]
-        LP5[Confluence Parser<br/>📚 Team wiki]
-        LP6[Jupyter Parser<br/>💻 Notebooks]
-        LP7[CSV Parser<br/>📊 Tabular data]
-        LP8[YAML Parser<br/>⚙️ Config files]
-    end
-
-    subgraph FuturePriority["🔵 FUTURE - v2.0+"]
-        FP1[Substack Parser<br/>📧 Newsletters]
-        FP2[GitHub Parser<br/>💻 Code repos]
-        FP3[Telegram Parser<br/>💬 Messaging]
-        FP4[Discord Parser<br/>🎮 Community]
-        FP5[Slack Parser<br/>💼 Workplace]
-        FP6[Email Parser<br/>📧 Messages]
-        FP7[Academic DB Parser<br/>🎓 Research]
-        FP8[Legal Doc Parser<br/>⚖️ Specialized]
-    end
-
-    HighPriority -.->|After v1.2| MediumPriority
-    MediumPriority -.->|After v1.5| LowPriority
-    LowPriority -.->|After v1.6| FuturePriority
-
-    style HighPriority fill:#ffebee,stroke:#c62828,stroke-width:3px
-    style MediumPriority fill:#fff9c4,stroke:#f57f17,stroke-width:2px
-    style LowPriority fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-    style FuturePriority fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
-```
+![[comprehensive-workflow_7_graph.png]]
 
 ### Feature Evolution Map
 
-```mermaid
-mindmap
-  root((OmniParser<br/>Evolution))
-    v1.0 Foundation
-      Core Architecture
-        BaseParser interface
-        Document model
-        Exception handling
-      Single Parser
-        EPUB only
-        TOC detection
-        Basic metadata
-      Testing
-        Unit tests >80%
-        Integration tests
-        Fixtures
-    v1.1-1.2 Format Expansion
-      Document Parsers
-        PDF PyMuPDF + OCR
-        DOCX python-docx
-        RTF striprtf
-        ODT odfpy
-      Web Parsers
-        HTML Trafilatura
-        Markdown frontmatter
-        Text chardet
-      Quality
-        >85% coverage
-        Performance tuning
-        Error handling
-    v1.3-1.5 Integration
-      Structured Data
-        JSON schema detection
-        XML lxml
-        CSV pandas
-        YAML PyYAML
-      Social Media
-        Twitter API v2
-        Reddit PRAW
-        Medium scraping
-        LinkedIn parsing
-      Cloud Platforms
-        Google Docs API
-        Notion API
-        Confluence API
-        Dropbox Paper
-      Archives
-        ZIP support
-        TAR support
-        Nested parsing
-        Batch processing
-    v1.6 Advanced Features
-      Enhanced Extraction
-        Table extraction
-        Form parsing
-        Code block detection
-        Equation extraction
-      Media Processing
-        Image enhancement
-        OCR improvements
-        Video metadata
-        Audio transcripts
-      Technical Parsers
-        Jupyter notebooks
-        LaTeX documents
-        Swagger/OpenAPI
-        GraphQL schemas
-    v2.0 AI-Powered
-      Intelligence
-        AI chapter detection
-        Semantic analysis
-        Auto-summarization
-        Entity extraction
-      NLP Features
-        Multi-language
-        Translation hints
-        Sentiment analysis
-        Topic modeling
-      Quality Enhancements
-        Content scoring
-        Completeness checks
-        Accuracy validation
-        Auto-correction
-    v2.1+ Enterprise
-      Performance
-        Streaming API
-        Chunked processing
-        Parallel parsing
-        Caching layer
-      Integration
-        Webhooks
-        Event system
-        Progress callbacks
-        Real-time updates
-      Deployment
-        Microservice mode
-        Docker containers
-        Kubernetes support
-        Cloud-native
-      Monitoring
-        Metrics
-        Logging
-        Tracing
-        Alerts
-    v2.2+ Ecosystem
-      Extensibility
-        Plugin system
-        Custom parsers
-        Parser SDK
-        Community marketplace
-      Developer Tools
-        CLI tools
-        VS Code extension
-        Web playground
-        API explorer
-      Community
-        Open source parsers
-        Shared configs
-        Best practices
-        Use case library
-```
+![[comprehensive-workflow_8_mindmap.png]]
 
 ---
 
@@ -389,51 +217,7 @@ parse_document:
 
 ### Target Performance Goals
 
-```mermaid
-graph LR
-    subgraph InputSize["Input Size Categories"]
-        Small[Small<br/>< 1 MB<br/>~50 pages]
-        Medium[Medium<br/>1-10 MB<br/>50-500 pages]
-        Large[Large<br/>10-100 MB<br/>500-5000 pages]
-        XLarge[Extra Large<br/>100-500 MB<br/>5000+ pages]
-    end
-
-    subgraph Performance["Performance Targets"]
-        T1[< 1 second<br/>✅ Real-time]
-        T2[< 5 seconds<br/>✅ Acceptable]
-        T3[< 30 seconds<br/>⚠️ Slow]
-        T4[< 5 minutes<br/>⚠️ Very Slow]
-    end
-
-    subgraph Memory["Memory Usage"]
-        M1[< 100 MB<br/>✅ Minimal]
-        M2[< 500 MB<br/>✅ Acceptable]
-        M3[< 2 GB<br/>⚠️ High]
-        M4[< 5 GB<br/>❌ Too High]
-    end
-
-    Small --> T1
-    Small --> M1
-
-    Medium --> T2
-    Medium --> M2
-
-    Large --> T3
-    Large --> M3
-
-    XLarge --> T4
-    XLarge --> M3
-
-    style T1 fill:#c8e6c9
-    style T2 fill:#c8e6c9
-    style T3 fill:#fff9c4
-    style T4 fill:#fff9c4
-
-    style M1 fill:#c8e6c9
-    style M2 fill:#c8e6c9
-    style M3 fill:#fff9c4
-    style M4 fill:#ffcdd2
-```
+![[comprehensive-workflow_9_graph.png]]
 
 ---
 

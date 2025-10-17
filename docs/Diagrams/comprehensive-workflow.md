@@ -336,7 +336,7 @@ mindmap
 
 ```mermaid
 flowchart TD
-    Start([Input Received<br/>file_path | URL | API data])
+    Start([Input Received<br/>file_path / URL / API data])
 
     CheckType{Input Type?}
 
@@ -456,7 +456,7 @@ flowchart TD
 ```mermaid
 flowchart TB
     subgraph Stage1["STAGE 1: INPUT VALIDATION"]
-        Input[Raw Input<br/>File | URL | Data]
+        Input[Raw Input<br/>File / URL / Data]
 
         Check1{File<br/>Exists?}
         Check2{Size<br/>Valid?}
@@ -576,7 +576,7 @@ flowchart TB
     subgraph Stage8["STAGE 8: TEXT CLEANING"]
         Valid7 --> CleanText[Text Cleaning]
 
-        CleanText --> RemovePatterns[Remove Patterns<br/>• Footnotes [1]<br/>• URLs<br/>• Artifacts<br/>• Junk]
+        CleanText --> RemovePatterns[Remove Patterns<br/>• Footnotes<br/>• URLs<br/>• Artifacts<br/>• Junk]
 
         CleanText --> TransformPatterns[Transform Patterns<br/>• Em dashes<br/>• Quotes<br/>• Special chars<br/>• Ligatures]
 
@@ -835,33 +835,33 @@ gantt
     title OmniParser Development Roadmap
     dateFormat YYYY-MM-DD
     section Foundation
-    Phase 1: Core Architecture           :done, p1, 2025-10-16, 1w
-    Phase 2: EPUB Parser (epub2tts port) :active, p2, 2025-10-17, 3w
-    Phase 3: Testing & Documentation     :p3, after p2, 2w
+    Phase 1 - Core Architecture           :done, p1, 2025-10-16, 1w
+    Phase 2 - EPUB Parser (epub2tts port) :active, p2, 2025-10-17, 3w
+    Phase 3 - Testing & Documentation     :p3, after p2, 2w
 
     section v1.0 Release
-    v1.0: Initial Release                :milestone, m1, after p3, 1d
-    EPUB Parser Only                     :crit, after p3, 1d
+    v1.0 - Initial Release                :milestone, m1, after p3, 1d
+    EPUB Parser Only                     :crit, p3a, after p3, 1d
 
     section v1.1 - Core Formats
     PDF Parser (PyMuPDF + OCR)           :p4, after m1, 2w
     DOCX Parser (python-docx)            :p5, after p4, 1w
     HTML/Web Parser (Trafilatura)        :p6, after p5, 1w
-    v1.1: Core Formats Complete          :milestone, m2, after p6, 1d
+    v1.1 - Core Formats Complete          :milestone, m2, after p6, 1d
 
     section v1.2 - Extended Formats
     Markdown Parser                      :p7, after m2, 3d
     Text Parser (encoding detection)     :p8, after p7, 2d
     RTF Parser                          :p9, after p8, 4d
     ODT Parser (LibreOffice)            :p10, after p9, 5d
-    v1.2: Extended Formats              :milestone, m3, after p10, 1d
+    v1.2 - Extended Formats              :milestone, m3, after p10, 1d
 
     section v1.3 - Structured Data
     JSON Parser (structured data)        :p11, after m3, 1w
     XML Parser (lxml-based)             :p12, after p11, 1w
     CSV Parser (pandas)                 :p13, after p12, 3d
     YAML Parser                         :p14, after p13, 2d
-    v1.3: Structured Data Support       :milestone, m4, after p14, 1d
+    v1.3 - Structured Data Support       :milestone, m4, after p14, 1d
 
     section v1.4 - Web & Social
     Feed Parser (RSS/Atom)              :p15, after m4, 1w
@@ -869,21 +869,21 @@ gantt
     Reddit Parser (PRAW)                :p17, after p16, 1w
     Medium Parser (web scraping)        :p18, after p17, 5d
     LinkedIn Parser                     :p19, after p18, 5d
-    v1.4: Social Media Support          :milestone, m5, after p19, 1d
+    v1.4 - Social Media Support          :milestone, m5, after p19, 1d
 
     section v1.5 - Cloud & Collaboration
     Google Docs Parser                  :p20, after m5, 1w
     Notion Parser                       :p21, after p20, 1w
     Confluence Parser                   :p22, after p21, 1w
     Archive Parser (ZIP/TAR)            :p23, after p22, 1w
-    v1.5: Cloud Platforms               :milestone, m6, after p23, 1d
+    v1.5 - Cloud Platforms               :milestone, m6, after p23, 1d
 
     section v1.6 - Advanced Features
     Jupyter Notebook Parser             :p24, after m6, 1w
     Table Extraction (all formats)      :p25, after p24, 2w
     Advanced Image Processing           :p26, after p25, 1w
     Code Documentation Parser           :p27, after p26, 1w
-    v1.6: Advanced Features             :milestone, m7, after p27, 1d
+    v1.6 - Advanced Features             :milestone, m7, after p27, 1d
 
     section v2.0 - Intelligence
     AI-Powered Chapter Detection        :p28, after m7, 2w
@@ -891,7 +891,7 @@ gantt
     Auto-Tagging & Categorization       :p30, after p29, 1w
     Content Summarization               :p31, after p30, 1w
     Multi-Language Support (NLP)        :p32, after p31, 2w
-    v2.0: AI-Enhanced Processing        :milestone, m8, after p32, 1d
+    v2.0 - AI-Enhanced Processing        :milestone, m8, after p32, 1d
 
     section v2.1 - Enterprise
     Streaming API (large files)         :p33, after m8, 2w
@@ -899,14 +899,14 @@ gantt
     Webhook Integration                 :p35, after p34, 1w
     Progress Callbacks                  :p36, after p35, 1w
     Microservice Deployment             :p37, after p36, 1w
-    v2.1: Enterprise Features           :milestone, m9, after p37, 1d
+    v2.1 - Enterprise Features           :milestone, m9, after p37, 1d
 
     section v2.2 - Ecosystem
     Plugin System                       :p38, after m9, 2w
     Custom Parser SDK                   :p39, after p38, 2w
     Parser Marketplace                  :p40, after p39, 3w
     Community Contributions             :p41, after p40, 4w
-    v2.2: Ecosystem Platform            :milestone, m10, after p41, 1d
+    v2.2 - Ecosystem Platform            :milestone, m10, after p41, 1d
 ```
 
 ### Parser Priority Matrix
