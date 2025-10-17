@@ -44,17 +44,22 @@
 
 ## Project Overview
 
-OmniParser is a standalone Python package that converts documents from multiple formats (EPUB, PDF, DOCX, HTML, URLs, Markdown, Text) into clean, structured markdown with comprehensive metadata extraction.
+OmniParser is a **universal content ingestion platform** that transforms any document, web page, social media post, feed, or structured data into clean, standardized markdown with comprehensive metadata extraction.
+
+### Vision: Parse Anything, Output Consistency
+
+From books and PDFs to blog posts and tweets, from research papers to Reddit threads - OmniParser provides a **single unified API** that handles 20+ input formats and delivers consistent, structured output every time.
 
 ### Primary Goals
 
 1. Extract epub2tts's production-tested EPUB processing into a reusable library
-2. Create unified interface for parsing documents regardless of format
+2. Create unified interface for parsing **any content source** regardless of format
 3. Provide consistent data models across all parsers
-4. Enable epub2tts and other projects to consume document parsing as a service
+4. Enable epub2tts, RAG systems, content platforms, and other projects to consume document parsing as a service
 
 ### Key Features
 
+#### v1.0-1.2 (Core Foundation)
 - **6 Format Parsers:** EPUB, PDF, DOCX, HTML/URL, Markdown, Text
 - **Universal Output:** All parsers return same Document structure
 - **Chapter Detection:** Intelligent heading-based chapter boundaries
@@ -62,6 +67,16 @@ OmniParser is a standalone Python package that converts documents from multiple 
 - **Image Handling:** Extract and catalog images with position tracking
 - **Text Cleaning:** Encoding fixes, normalization, whitespace handling
 - **PyPI Ready:** Professional package for `pip install omniparser`
+
+#### Future Expansion (v1.3+)
+- **Web & Social:** Twitter/X, Reddit, LinkedIn, Medium, RSS/Atom feeds
+- **Cloud Platforms:** Google Docs, Notion, Confluence, Dropbox Paper
+- **Structured Data:** JSON, XML, CSV, YAML parsing with schema detection
+- **Archives:** ZIP/TAR support with batch processing
+- **Technical:** Jupyter notebooks, code documentation, API specs
+- **AI-Powered:** Semantic analysis, auto-tagging, summarization (v2.0+)
+
+**📖 See [Diagrams/comprehensive-workflow.md](Diagrams/comprehensive-workflow.md) for the complete vision**
 
 ---
 
@@ -185,6 +200,15 @@ for chapter in doc.chapters:
 - **IMPLEMENTATION_REFERENCE.md** - Developer quick reference
 - **ARCHITECTURE_DIAGRAMS.md** - Visual architecture
 - **OMNIPARSER_PROJECT_SPEC.md** - Technical specification
+
+### Visual Workflows
+- **[Diagrams/comprehensive-workflow.md](Diagrams/comprehensive-workflow.md)** - 🆕 **Comprehensive workflow vision**
+  - Universal content ingestion platform
+  - 20+ input sources (documents, web, social, feeds, cloud, code)
+  - Complete parser routing and processing pipeline
+  - Integration patterns and consumers
+  - Future roadmap and expansion phases
+  - **Start here to see the full scope of OmniParser's potential**
 
 ### Source Materials (Reference)
 - `/Users/autumn/Documents/Projects/epub2tts/METAPROMPT_1_OMNIPARSER_EXTRACTION.md`
