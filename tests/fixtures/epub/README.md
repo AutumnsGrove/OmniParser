@@ -4,9 +4,16 @@ This directory contains EPUB files used for integration testing.
 
 ## ⚠️ Important: Copyright Notice
 
-**EPUB files are NOT included in this repository due to copyright restrictions.**
+**This repository includes 5 public domain EPUB files from Project Gutenberg for testing.**
 
-The `.gitignore` file is configured to exclude all `.epub` files from version control to prevent accidental commits of copyrighted material.
+These files are explicitly allowed in `.gitignore`:
+- `alice-in-wonderland.epub` (185 KB)
+- `pride-and-prejudice.epub` (24 MB)
+- `moby-dick.epub` (797 KB)
+- `frankenstein.epub` (465 KB)
+- `jekyll-and-hyde.epub` (298 KB)
+
+**All other `.epub` files are blocked** by `.gitignore` to prevent accidental commits of copyrighted material.
 
 ## Adding Your Own Test EPUBs
 
@@ -96,11 +103,40 @@ pytest -m "not integration"
 
 ## Current Test Files
 
-The integration tests expect these files (you need to provide them):
+The repository includes 5 public domain EPUBs from Project Gutenberg:
 
-- `A System for Writing.epub` - Used in `test_epub_parsing.py`
-  - You can use any EPUB file and update the test expectations
-  - Or rename your test file to match
+1. **alice-in-wonderland.epub** (185 KB)
+   - Title: Alice's Adventures in Wonderland
+   - Author: Lewis Carroll
+   - 14 chapters, 30,172 words
+   - Parse time: ~0.14s
+
+2. **pride-and-prejudice.epub** (24 MB)
+   - Title: Pride and Prejudice
+   - Author: Jane Austen
+   - 7 chapters, 132,243 words, 163 images
+   - Parse time: ~0.48s
+
+3. **moby-dick.epub** (797 KB)
+   - Title: Moby Dick; Or, The Whale
+   - Author: Herman Melville
+   - 11 chapters, 220,070 words
+   - Parse time: ~0.65s
+
+4. **frankenstein.epub** (465 KB)
+   - Title: Frankenstein; Or, The Modern Prometheus
+   - Author: Mary Wollstonecraft Shelley
+   - 30 chapters, 78,298 words
+   - Parse time: ~0.20s
+
+5. **jekyll-and-hyde.epub** (298 KB)
+   - Title: The Strange Case of Dr. Jekyll and Mr. Hyde
+   - Author: Robert Louis Stevenson
+   - 12 chapters, 28,902 words
+   - Parse time: ~0.09s
+
+**Additional files (not in repo):**
+- `A System for Writing.epub` - Used in some tests, not committed (copyrighted)
 
 ## Contributing
 

@@ -112,10 +112,31 @@ From books and PDFs to blog posts and tweets, from research papers to Reddit thr
 ## Quick Start (Future)
 
 ### Installation
+
+#### Standard Installation (with example EPUBs)
 ```bash
 pip install omniparser
 # or
 uv add omniparser
+```
+
+#### Lightweight Installation (without examples)
+If you don't need the 25MB of example EPUB files:
+```bash
+# Clone without large files
+git clone --filter=blob:none --no-checkout https://github.com/AutumnsGrove/omniparser.git
+cd omniparser
+git sparse-checkout init --cone
+git sparse-checkout set '/*' '!tests/fixtures/epub/*.epub'
+git checkout
+
+# Or clone normally and remove examples
+git clone https://github.com/AutumnsGrove/omniparser.git
+cd omniparser
+rm -rf tests/fixtures/epub/*.epub
+
+# Install
+uv sync
 ```
 
 ### Basic Usage

@@ -81,9 +81,18 @@ Thumbs.db
 *.log
 
 # Test fixtures (large files)
-tests/fixtures/*.epub
-tests/fixtures/*.pdf
-tests/fixtures/*.docx
+# Block all EPUBs by default
+tests/fixtures/**/*.epub
+tests/fixtures/**/*.pdf
+tests/fixtures/**/*.docx
+
+# Allow only the 5 public domain examples from Project Gutenberg
+!tests/fixtures/epub/alice-in-wonderland.epub
+!tests/fixtures/epub/pride-and-prejudice.epub
+!tests/fixtures/epub/moby-dick.epub
+!tests/fixtures/epub/frankenstein.epub
+!tests/fixtures/epub/jekyll-and-hyde.epub
+
 !tests/fixtures/.gitkeep
 
 # Ignore generated documentation
