@@ -64,7 +64,7 @@ Repository = "https://github.com/AutumnsGrove/omniparser"
 Issues = "https://github.com/AutumnsGrove/omniparser/issues"
 Documentation = "https://omniparser.readthedocs.io"
 
-[tool.hatch.build.targets.wheel]
+[tool.hatch.build]
 packages = ["src/omniparser"]
 
 [tool.black]
