@@ -40,14 +40,12 @@ __all__ = [
     "parse_document",
     "get_supported_formats",
     "is_format_supported",
-
     # Models
     "Document",
     "Chapter",
     "Metadata",
     "ImageReference",
     "ProcessingInfo",
-
     # Exceptions
     "OmniparserError",
     "UnsupportedFormatError",
@@ -55,10 +53,8 @@ __all__ = [
     "FileReadError",
     "NetworkError",
     "ValidationError",
-
     # Parsers
     "EPUBParser",
-
     # Version
     "__version__",
 ]

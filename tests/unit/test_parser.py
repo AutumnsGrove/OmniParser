@@ -29,7 +29,7 @@ class TestParseDocument:
         test_file.write_text("dummy content")
 
         # Mock EPUBParser to avoid needing a real EPUB
-        with patch('omniparser.parser.EPUBParser') as MockParser:
+        with patch("omniparser.parser.EPUBParser") as MockParser:
             mock_parser_instance = Mock()
             mock_doc = Mock(spec=Document)
             mock_parser_instance.parse.return_value = mock_doc
@@ -49,7 +49,7 @@ class TestParseDocument:
         test_file.write_text("dummy content")
 
         # Mock EPUBParser
-        with patch('omniparser.parser.EPUBParser') as MockParser:
+        with patch("omniparser.parser.EPUBParser") as MockParser:
             mock_parser_instance = Mock()
             mock_doc = Mock(spec=Document)
             mock_parser_instance.parse.return_value = mock_doc
@@ -80,7 +80,7 @@ class TestParseDocument:
         test_file = tmp_path / "test.epub"
         test_file.write_text("dummy content")
 
-        with patch('omniparser.parser.EPUBParser') as MockParser:
+        with patch("omniparser.parser.EPUBParser") as MockParser:
             mock_parser_instance = Mock()
             mock_doc = Mock(spec=Document)
             mock_parser_instance.parse.return_value = mock_doc
@@ -98,13 +98,9 @@ class TestParseDocument:
         test_file = tmp_path / "test.epub"
         test_file.write_text("dummy content")
 
-        options = {
-            'extract_images': False,
-            'clean_text': True,
-            'detect_chapters': True
-        }
+        options = {"extract_images": False, "clean_text": True, "detect_chapters": True}
 
-        with patch('omniparser.parser.EPUBParser') as MockParser:
+        with patch("omniparser.parser.EPUBParser") as MockParser:
             mock_parser_instance = Mock()
             mock_doc = Mock(spec=Document)
             mock_parser_instance.parse.return_value = mock_doc
@@ -120,7 +116,9 @@ class TestParseDocument:
         test_file = tmp_path / "test.pdf"
         test_file.write_text("dummy content")
 
-        with pytest.raises(UnsupportedFormatError, match="PDF format not yet implemented"):
+        with pytest.raises(
+            UnsupportedFormatError, match="PDF format not yet implemented"
+        ):
             parse_document(test_file)
 
     def test_parse_document_unsupported_docx(self, tmp_path):
@@ -128,7 +126,9 @@ class TestParseDocument:
         test_file = tmp_path / "test.docx"
         test_file.write_text("dummy content")
 
-        with pytest.raises(UnsupportedFormatError, match="DOCX format not yet implemented"):
+        with pytest.raises(
+            UnsupportedFormatError, match="DOCX format not yet implemented"
+        ):
             parse_document(test_file)
 
     def test_parse_document_unsupported_doc(self, tmp_path):
@@ -136,7 +136,9 @@ class TestParseDocument:
         test_file = tmp_path / "test.doc"
         test_file.write_text("dummy content")
 
-        with pytest.raises(UnsupportedFormatError, match="DOCX format not yet implemented"):
+        with pytest.raises(
+            UnsupportedFormatError, match="DOCX format not yet implemented"
+        ):
             parse_document(test_file)
 
     def test_parse_document_unsupported_html(self, tmp_path):
@@ -144,7 +146,9 @@ class TestParseDocument:
         test_file = tmp_path / "test.html"
         test_file.write_text("dummy content")
 
-        with pytest.raises(UnsupportedFormatError, match="HTML format not yet implemented"):
+        with pytest.raises(
+            UnsupportedFormatError, match="HTML format not yet implemented"
+        ):
             parse_document(test_file)
 
     def test_parse_document_unsupported_htm(self, tmp_path):
@@ -152,7 +156,9 @@ class TestParseDocument:
         test_file = tmp_path / "test.htm"
         test_file.write_text("dummy content")
 
-        with pytest.raises(UnsupportedFormatError, match="HTML format not yet implemented"):
+        with pytest.raises(
+            UnsupportedFormatError, match="HTML format not yet implemented"
+        ):
             parse_document(test_file)
 
     def test_parse_document_unsupported_markdown(self, tmp_path):
@@ -160,7 +166,9 @@ class TestParseDocument:
         test_file = tmp_path / "test.md"
         test_file.write_text("dummy content")
 
-        with pytest.raises(UnsupportedFormatError, match="Markdown format not yet implemented"):
+        with pytest.raises(
+            UnsupportedFormatError, match="Markdown format not yet implemented"
+        ):
             parse_document(test_file)
 
     def test_parse_document_unsupported_txt(self, tmp_path):
@@ -168,7 +176,9 @@ class TestParseDocument:
         test_file = tmp_path / "test.txt"
         test_file.write_text("dummy content")
 
-        with pytest.raises(UnsupportedFormatError, match="Text format not yet implemented"):
+        with pytest.raises(
+            UnsupportedFormatError, match="Text format not yet implemented"
+        ):
             parse_document(test_file)
 
     def test_parse_document_unknown_format(self, tmp_path):
@@ -176,7 +186,9 @@ class TestParseDocument:
         test_file = tmp_path / "test.xyz"
         test_file.write_text("dummy content")
 
-        with pytest.raises(UnsupportedFormatError, match="Unsupported file format: .xyz"):
+        with pytest.raises(
+            UnsupportedFormatError, match="Unsupported file format: .xyz"
+        ):
             parse_document(test_file)
 
     def test_parse_document_case_insensitive_extension(self, tmp_path):
@@ -184,7 +196,7 @@ class TestParseDocument:
         test_file = tmp_path / "test.EPUB"
         test_file.write_text("dummy content")
 
-        with patch('omniparser.parser.EPUBParser') as MockParser:
+        with patch("omniparser.parser.EPUBParser") as MockParser:
             mock_parser_instance = Mock()
             mock_doc = Mock(spec=Document)
             mock_parser_instance.parse.return_value = mock_doc
@@ -208,12 +220,12 @@ class TestGetSupportedFormats:
     def test_get_supported_formats_contains_epub(self):
         """Test that EPUB is in supported formats."""
         formats = get_supported_formats()
-        assert '.epub' in formats
+        assert ".epub" in formats
 
     def test_get_supported_formats_only_epub_for_now(self):
         """Test that only EPUB is supported currently."""
         formats = get_supported_formats()
-        assert formats == ['.epub']
+        assert formats == [".epub"]
 
 
 class TestIsFormatSupported:
@@ -257,11 +269,19 @@ class TestImports:
     def test_import_parse_document(self):
         """Test that parse_document can be imported from package."""
         from omniparser import parse_document
+
         assert callable(parse_document)
 
     def test_import_models(self):
         """Test that models can be imported from package."""
-        from omniparser import Document, Chapter, Metadata, ImageReference, ProcessingInfo
+        from omniparser import (
+            Document,
+            Chapter,
+            Metadata,
+            ImageReference,
+            ProcessingInfo,
+        )
+
         assert Document is not None
         assert Chapter is not None
         assert Metadata is not None
@@ -278,6 +298,7 @@ class TestImports:
             NetworkError,
             ValidationError,
         )
+
         assert issubclass(UnsupportedFormatError, OmniparserError)
         assert issubclass(ParsingError, OmniparserError)
         assert issubclass(FileReadError, OmniparserError)
@@ -287,16 +308,19 @@ class TestImports:
     def test_import_parser(self):
         """Test that EPUBParser can be imported from package."""
         from omniparser import EPUBParser
+
         assert EPUBParser is not None
 
     def test_import_version(self):
         """Test that version can be imported from package."""
         from omniparser import __version__
+
         assert isinstance(__version__, str)
         assert __version__ == "1.0.0"
 
     def test_import_utility_functions(self):
         """Test that utility functions can be imported."""
         from omniparser import get_supported_formats, is_format_supported
+
         assert callable(get_supported_formats)
         assert callable(is_format_supported)

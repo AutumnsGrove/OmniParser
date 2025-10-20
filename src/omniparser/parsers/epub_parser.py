@@ -10,6 +10,7 @@ Ported and adapted from epub2tts project with TTS-specific features removed.
 """
 
 import logging
+import re
 import tempfile
 import uuid
 from datetime import datetime
@@ -18,6 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import ebooklib
 from ebooklib import epub
+from PIL import Image
 
 from ..base.base_parser import BaseParser
 from ..exceptions import FileReadError, ParsingError, ValidationError
@@ -44,7 +46,7 @@ class TocEntry:
         title: str,
         href: str,
         level: int = 1,
-        children: Optional[List["TocEntry"]] = None
+        children: Optional[List["TocEntry"]] = None,
     ):
         self.title = title
         self.href = href
@@ -87,12 +89,12 @@ class EPUBParser(BaseParser):
         super().__init__(options)
 
         # Set default options
-        self.options.setdefault('extract_images', True)
-        self.options.setdefault('detect_chapters', True)
-        self.options.setdefault('clean_text', True)
-        self.options.setdefault('min_chapter_length', 100)
-        self.options.setdefault('use_toc', True)
-        self.options.setdefault('use_spine_fallback', True)
+        self.options.setdefault("extract_images", True)
+        self.options.setdefault("detect_chapters", True)
+        self.options.setdefault("clean_text", True)
+        self.options.setdefault("min_chapter_length", 100)
+        self.options.setdefault("use_toc", True)
+        self.options.setdefault("use_spine_fallback", True)
 
         # Initialize tracking
         self._warnings: List[str] = []
@@ -107,7 +109,7 @@ class EPUBParser(BaseParser):
         Returns:
             True if file has .epub extension, False otherwise.
         """
-        return file_path.suffix.lower() in ['.epub']
+        return file_path.suffix.lower() in [".epub"]
 
     def parse(self, file_path: Path) -> Document:
         """Parse EPUB file and return Document object.
@@ -152,7 +154,9 @@ class EPUBParser(BaseParser):
 
             # Step 4: Extract TOC structure
             logger.info("Extracting table of contents")
-            toc_entries = self._extract_toc(book) if self.options.get('use_toc') else None
+            toc_entries = (
+                self._extract_toc(book) if self.options.get("use_toc") else None
+            )
 
             # Step 5: Extract content and detect chapters
             logger.info("Extracting content and detecting chapters")
@@ -160,7 +164,7 @@ class EPUBParser(BaseParser):
 
             # Step 6: Extract images (if enabled)
             images: List[ImageReference] = []
-            if self.options.get('extract_images'):
+            if self.options.get("extract_images"):
                 logger.info("Extracting images")
                 try:
                     images = self.extract_images(file_path)
@@ -169,7 +173,7 @@ class EPUBParser(BaseParser):
                     self._warnings.append(f"Image extraction failed: {e}")
 
             # Step 7: Clean text (if enabled)
-            if self.options.get('clean_text'):
+            if self.options.get("clean_text"):
                 logger.info("Cleaning text")
                 content = self.clean_text(content)
                 for chapter in chapters:
@@ -187,7 +191,7 @@ class EPUBParser(BaseParser):
                 processing_time=processing_time,
                 timestamp=datetime.now(),
                 warnings=self._warnings,
-                options_used=self.options.copy()
+                options_used=self.options.copy(),
             )
 
             # Step 10: Create and return Document
@@ -199,10 +203,12 @@ class EPUBParser(BaseParser):
                 metadata=metadata,
                 processing_info=processing_info,
                 word_count=word_count,
-                estimated_reading_time=reading_time
+                estimated_reading_time=reading_time,
             )
 
-            logger.info(f"EPUB parsing complete: {word_count} words, {len(chapters)} chapters, {len(images)} images")
+            logger.info(
+                f"EPUB parsing complete: {word_count} words, {len(chapters)} chapters, {len(images)} images"
+            )
             return document
 
         except (FileReadError, ValidationError):
@@ -211,9 +217,7 @@ class EPUBParser(BaseParser):
         except Exception as e:
             logger.error(f"EPUB parsing failed: {e}")
             raise ParsingError(
-                f"Failed to parse EPUB file: {e}",
-                parser="EPUBParser",
-                original_error=e
+                f"Failed to parse EPUB file: {e}", parser="EPUBParser", original_error=e
             )
 
     def _validate_epub(self, file_path: Path) -> None:
@@ -272,9 +276,7 @@ class EPUBParser(BaseParser):
         except Exception as e:
             logger.error(f"Failed to load EPUB: {e}")
             raise ParsingError(
-                f"Failed to load EPUB file: {e}",
-                parser="EPUBParser",
-                original_error=e
+                f"Failed to load EPUB file: {e}", parser="EPUBParser", original_error=e
             )
 
     def _extract_metadata(self, book: epub.EpubBook, file_path: Path) -> Metadata:
@@ -290,6 +292,7 @@ class EPUBParser(BaseParser):
         Returns:
             Metadata object with extracted fields.
         """
+
         # Helper function to safely extract first metadata value
         def get_first_metadata(namespace: str, name: str) -> Optional[str]:
             """Get first metadata value from book."""
@@ -314,27 +317,27 @@ class EPUBParser(BaseParser):
             return []
 
         # Extract title
-        title = get_first_metadata('DC', 'title')
+        title = get_first_metadata("DC", "title")
 
         # Extract authors (all contributors)
-        authors = get_all_metadata('DC', 'creator')
+        authors = get_all_metadata("DC", "creator")
         # Primary author is first in list
         author = authors[0] if authors else None
 
         # Extract publisher
-        publisher = get_first_metadata('DC', 'publisher')
+        publisher = get_first_metadata("DC", "publisher")
 
         # Extract and parse publication date
         publication_date: Optional[datetime] = None
-        date_str = get_first_metadata('DC', 'date')
+        date_str = get_first_metadata("DC", "date")
         if date_str:
             # Try common date formats
             date_formats = [
-                '%Y-%m-%d',           # 2023-01-15
-                '%Y-%m-%dT%H:%M:%S',  # 2023-01-15T10:30:00
-                '%Y-%m-%dT%H:%M:%SZ', # 2023-01-15T10:30:00Z
-                '%Y',                 # 2023
-                '%Y-%m',              # 2023-01
+                "%Y-%m-%d",  # 2023-01-15
+                "%Y-%m-%dT%H:%M:%S",  # 2023-01-15T10:30:00
+                "%Y-%m-%dT%H:%M:%SZ",  # 2023-01-15T10:30:00Z
+                "%Y",  # 2023
+                "%Y-%m",  # 2023-01
             ]
             for fmt in date_formats:
                 try:
@@ -347,23 +350,28 @@ class EPUBParser(BaseParser):
                 self._warnings.append(f"Could not parse publication date: {date_str}")
 
         # Extract language
-        language = get_first_metadata('DC', 'language')
+        language = get_first_metadata("DC", "language")
 
         # Extract ISBN from identifiers
         isbn: Optional[str] = None
-        identifiers = get_all_metadata('DC', 'identifier')
+        identifiers = get_all_metadata("DC", "identifier")
         for identifier in identifiers:
             # Look for ISBN in identifier string
-            if identifier and 'isbn' in identifier.lower():
+            if identifier and "isbn" in identifier.lower():
                 # Extract just the ISBN number (remove "ISBN:" prefix if present)
-                isbn = identifier.replace('urn:isbn:', '').replace('ISBN:', '').replace('isbn:', '').strip()
+                isbn = (
+                    identifier.replace("urn:isbn:", "")
+                    .replace("ISBN:", "")
+                    .replace("isbn:", "")
+                    .strip()
+                )
                 break
 
         # Extract description
-        description = get_first_metadata('DC', 'description')
+        description = get_first_metadata("DC", "description")
 
         # Extract tags/subjects
-        tags = get_all_metadata('DC', 'subject')
+        tags = get_all_metadata("DC", "subject")
 
         # Calculate file size
         file_size = file_path.stat().st_size
@@ -380,7 +388,7 @@ class EPUBParser(BaseParser):
             tags=tags,
             original_format="epub",
             file_size=file_size,
-            custom_fields={}
+            custom_fields={},
         )
 
     def _extract_toc(self, book: epub.EpubBook) -> Optional[List[TocEntry]]:
@@ -428,10 +436,7 @@ class EPUBParser(BaseParser):
             return None
 
     def _parse_toc_item(
-        self,
-        items: Any,
-        flat_toc: List[TocEntry],
-        level: int = 1
+        self, items: Any, flat_toc: List[TocEntry], level: int = 1
     ) -> None:
         """Recursively parse TOC items into flat list.
 
@@ -457,7 +462,7 @@ class EPUBParser(BaseParser):
                 section, children = items[0], items[1]
 
                 # Process section (could be Link or Section)
-                if hasattr(section, 'title') and hasattr(section, 'href'):
+                if hasattr(section, "title") and hasattr(section, "href"):
                     # It's a Link
                     try:
                         title = section.title or "Untitled"
@@ -466,12 +471,12 @@ class EPUBParser(BaseParser):
                     except Exception as e:
                         logger.warning(f"Failed to parse TOC Link: {e}")
                         self._warnings.append(f"Malformed TOC Link: {e}")
-                elif hasattr(section, 'title'):
+                elif hasattr(section, "title"):
                     # It's a Section (has title but maybe no href)
                     try:
                         title = section.title or "Untitled"
                         # Sections might not have href - use empty string
-                        href = getattr(section, 'href', '')
+                        href = getattr(section, "href", "")
                         flat_toc.append(TocEntry(title=title, href=href, level=level))
                     except Exception as e:
                         logger.warning(f"Failed to parse TOC Section: {e}")
@@ -483,7 +488,7 @@ class EPUBParser(BaseParser):
             return
 
         # Handle individual epub.Link
-        if hasattr(items, 'title') and hasattr(items, 'href'):
+        if hasattr(items, "title") and hasattr(items, "href"):
             try:
                 title = items.title or "Untitled"
                 href = items.href or ""
@@ -498,11 +503,12 @@ class EPUBParser(BaseParser):
         self._warnings.append(f"Unknown TOC item type: {type(items).__name__}")
 
     def _extract_content_and_chapters(
-        self,
-        book: epub.EpubBook,
-        toc_entries: Optional[List[TocEntry]]
+        self, book: epub.EpubBook, toc_entries: Optional[List[TocEntry]]
     ) -> Tuple[str, List[Chapter]]:
         """Extract full content and detect chapters.
+
+        Uses TOC-based detection if available, otherwise falls back to spine-based.
+        Post-processes chapters to filter empty ones and handle duplicates.
 
         Args:
             book: EpubBook object.
@@ -511,27 +517,453 @@ class EPUBParser(BaseParser):
         Returns:
             Tuple of (full_content, chapters_list).
         """
-        # TODO: Implement content and chapter extraction
-        # This will be implemented in later tasks
+        if toc_entries:
+            logger.info("Using TOC-based chapter detection")
+            content, chapters = self._extract_chapters_toc(book, toc_entries)
+        else:
+            logger.info("Using spine-based chapter detection (no TOC)")
+            content, chapters = self._extract_chapters_spine(book)
 
-        # Placeholder
-        content = "TODO: Extract content from EPUB"
-        chapters: List[Chapter] = []
+        # Post-process chapters
+        chapters = self._postprocess_chapters(chapters)
 
         return content, chapters
 
+    def _extract_chapters_toc(
+        self, book: epub.EpubBook, toc_entries: List[TocEntry]
+    ) -> Tuple[str, List[Chapter]]:
+        """Extract chapters using TOC-based detection.
+
+        Maps TOC entries to spine items and creates chapter boundaries based on
+        TOC structure. This is the preferred method as it respects the author's
+        intended chapter divisions.
+
+        Args:
+            book: EpubBook object.
+            toc_entries: List of TOC entries.
+
+        Returns:
+            Tuple of (full_content, chapters_list).
+        """
+        from ..utils.html_extractor import HTMLTextExtractor
+
+        # Get all spine items (reading order)
+        spine_items = list(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
+
+        if not spine_items:
+            logger.warning("No spine items found in EPUB")
+            return "", []
+
+        # Create mapping of href to spine items
+        # Handle both "chapter.xhtml" and "chapter.xhtml#anchor" formats
+        spine_map: Dict[str, epub.EpubHtml] = {}
+        for item in spine_items:
+            file_name = item.get_name()
+            spine_map[file_name] = item
+
+        # Extract text for all spine items and track positions
+        extractor = HTMLTextExtractor()
+        full_content_parts: List[str] = []
+        cumulative_length = 0
+
+        # Map of (file_name, anchor) -> position in full content
+        position_map: Dict[Tuple[str, str], int] = {}
+
+        for item in spine_items:
+            try:
+                # Get HTML content
+                content_bytes = item.get_content()
+                html_string = content_bytes.decode("utf-8", errors="ignore")
+
+                # Extract text
+                text = extractor.extract_text(html_string)
+
+                # Record start position for this file
+                file_name = item.get_name()
+                position_map[(file_name, "")] = cumulative_length
+
+                # TODO: Handle anchors within the file
+                # For now, we'll just track the file start position
+
+                full_content_parts.append(text)
+                cumulative_length += len(text)
+
+                # Add spacing between spine items
+                full_content_parts.append("\n\n")
+                cumulative_length += 2
+
+            except Exception as e:
+                logger.warning(
+                    f"Failed to extract content from spine item {item.get_id()}: {e}"
+                )
+                self._warnings.append(
+                    f"Failed to extract content from {item.get_id()}: {e}"
+                )
+
+        # Join all content
+        full_content = "".join(full_content_parts).strip()
+
+        # Create chapters from TOC entries
+        chapters: List[Chapter] = []
+        chapter_id = 1
+
+        for i, toc_entry in enumerate(toc_entries):
+            try:
+                # Parse href to get file name and anchor
+                href = toc_entry.href
+                if not href:
+                    logger.warning(
+                        f"TOC entry '{toc_entry.title}' has no href, skipping"
+                    )
+                    continue
+
+                # Split href into file and anchor
+                if "#" in href:
+                    file_name, anchor = href.split("#", 1)
+                else:
+                    file_name, anchor = href, ""
+
+                # Get start position from position map
+                if (file_name, "") not in position_map:
+                    logger.warning(
+                        f"TOC entry '{toc_entry.title}' references unknown file '{file_name}', skipping"
+                    )
+                    continue
+
+                start_position = position_map[(file_name, "")]
+
+                # Determine end position (start of next chapter or end of content)
+                if i + 1 < len(toc_entries):
+                    # Get next TOC entry's position
+                    next_href = toc_entries[i + 1].href
+                    if next_href:
+                        if "#" in next_href:
+                            next_file, next_anchor = next_href.split("#", 1)
+                        else:
+                            next_file, next_anchor = next_href, ""
+
+                        if (next_file, "") in position_map:
+                            end_position = position_map[(next_file, "")]
+                        else:
+                            end_position = len(full_content)
+                    else:
+                        end_position = len(full_content)
+                else:
+                    end_position = len(full_content)
+
+                # Extract chapter content
+                chapter_content = full_content[start_position:end_position].strip()
+
+                # Calculate word count
+                word_count = len(chapter_content.split())
+
+                # Create chapter object
+                chapter = Chapter(
+                    chapter_id=chapter_id,
+                    title=toc_entry.title,
+                    content=chapter_content,
+                    start_position=start_position,
+                    end_position=end_position,
+                    word_count=word_count,
+                    level=toc_entry.level,
+                    metadata={"detection_method": "toc", "source_href": href},
+                )
+
+                chapters.append(chapter)
+                chapter_id += 1
+
+                logger.debug(
+                    f"Created chapter {chapter_id - 1}: '{toc_entry.title}' ({word_count} words)"
+                )
+
+            except Exception as e:
+                logger.warning(
+                    f"Failed to create chapter from TOC entry '{toc_entry.title}': {e}"
+                )
+                self._warnings.append(
+                    f"Failed to create chapter '{toc_entry.title}': {e}"
+                )
+
+        logger.info(
+            f"Extracted {len(chapters)} chapters using TOC (total {len(full_content)} characters)"
+        )
+        return full_content, chapters
+
+    def _extract_chapters_spine(self, book: epub.EpubBook) -> Tuple[str, List[Chapter]]:
+        """Extract chapters using spine-based detection (fallback method).
+
+        Creates one chapter per spine item when TOC is not available. This is a
+        simple fallback that may not match the author's intended chapter structure.
+
+        Args:
+            book: EpubBook object.
+
+        Returns:
+            Tuple of (full_content, chapters_list).
+        """
+        from ..utils.html_extractor import HTMLTextExtractor
+
+        # Get all spine items (reading order)
+        spine_items = list(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
+
+        if not spine_items:
+            logger.warning("No spine items found in EPUB")
+            return "", []
+
+        extractor = HTMLTextExtractor()
+        full_content_parts: List[str] = []
+        chapters: List[Chapter] = []
+        cumulative_length = 0
+        chapter_id = 1
+
+        logger.info(f"Processing {len(spine_items)} spine items")
+
+        for item in spine_items:
+            try:
+                # Get HTML content
+                content_bytes = item.get_content()
+                html_string = content_bytes.decode("utf-8", errors="ignore")
+
+                # Extract text
+                text = extractor.extract_text(html_string)
+
+                # Record start position
+                start_position = cumulative_length
+
+                # Create title from item metadata or generate one
+                title = None
+
+                # Try to get title from item's title attribute
+                if hasattr(item, "title") and item.title:
+                    title = item.title
+                # Try to extract from first heading in HTML
+                elif "<h1" in html_string.lower():
+                    # Simple regex to extract first h1 content
+                    h1_match = re.search(
+                        r"<h1[^>]*>(.*?)</h1>", html_string, re.IGNORECASE | re.DOTALL
+                    )
+                    if h1_match:
+                        # Extract text from h1 (strip HTML tags)
+                        h1_html = h1_match.group(1)
+                        title = extractor.extract_text(h1_html).strip()
+
+                # Fallback to generated title
+                if not title:
+                    title = f"Chapter {chapter_id}"
+
+                # Add content to full document
+                full_content_parts.append(text)
+                cumulative_length += len(text)
+
+                # Calculate end position
+                end_position = cumulative_length
+
+                # Add spacing between chapters
+                full_content_parts.append("\n\n")
+                cumulative_length += 2
+
+                # Calculate word count
+                word_count = len(text.split())
+
+                # Create chapter object
+                chapter = Chapter(
+                    chapter_id=chapter_id,
+                    title=title,
+                    content=text,
+                    start_position=start_position,
+                    end_position=end_position,
+                    word_count=word_count,
+                    level=1,  # All spine items are top-level
+                    metadata={
+                        "detection_method": "spine",
+                        "source_item_id": item.get_id(),
+                        "source_file_name": item.get_name(),
+                    },
+                )
+
+                chapters.append(chapter)
+                chapter_id += 1
+
+                logger.debug(
+                    f"Created chapter {chapter_id - 1}: '{title}' ({word_count} words)"
+                )
+
+            except Exception as e:
+                logger.warning(
+                    f"Failed to extract content from spine item {item.get_id()}: {e}"
+                )
+                self._warnings.append(
+                    f"Failed to extract content from {item.get_id()}: {e}"
+                )
+
+        # Join all content
+        full_content = "".join(full_content_parts).strip()
+
+        logger.info(
+            f"Extracted {len(chapters)} chapters using spine (total {len(full_content)} characters)"
+        )
+        return full_content, chapters
+
+    def _postprocess_chapters(self, chapters: List[Chapter]) -> List[Chapter]:
+        """Post-process chapters: filter empty ones and handle duplicates.
+
+        Applies the following filters:
+        - Remove chapters below min_chapter_length threshold
+        - Disambiguate duplicate chapter titles
+
+        Args:
+            chapters: List of chapters to process.
+
+        Returns:
+            Filtered and cleaned chapter list.
+        """
+        min_length = self.options.get("min_chapter_length", 100)
+
+        # Filter empty/short chapters
+        filtered_chapters: List[Chapter] = []
+        removed_count = 0
+
+        for chapter in chapters:
+            if chapter.word_count < min_length:
+                logger.debug(
+                    f"Filtering chapter '{chapter.title}' ({chapter.word_count} words < {min_length} minimum)"
+                )
+                self._warnings.append(
+                    f"Filtered short chapter: '{chapter.title}' ({chapter.word_count} words)"
+                )
+                removed_count += 1
+            else:
+                filtered_chapters.append(chapter)
+
+        if removed_count > 0:
+            logger.info(
+                f"Filtered {removed_count} short chapters (< {min_length} words)"
+            )
+
+        # Handle duplicate titles
+        title_counts: Dict[str, int] = {}
+        for chapter in filtered_chapters:
+            title = chapter.title
+            if title in title_counts:
+                # Duplicate found - add disambiguation
+                title_counts[title] += 1
+                new_title = f"{title} ({title_counts[title]})"
+                logger.debug(
+                    f"Disambiguating duplicate title: '{title}' -> '{new_title}'"
+                )
+                chapter.title = new_title
+            else:
+                title_counts[title] = 1
+
+        # Re-number chapter IDs to be sequential after filtering
+        for i, chapter in enumerate(filtered_chapters, start=1):
+            chapter.chapter_id = i
+
+        return filtered_chapters
+
     def extract_images(self, file_path: Path) -> List[ImageReference]:
         """Extract images from EPUB file.
+
+        Extracts all images from the EPUB, saves them to a temporary directory,
+        and creates ImageReference objects with dimensions and format information.
 
         Args:
             file_path: Path to EPUB file.
 
         Returns:
             List of ImageReference objects.
+
+        Raises:
+            ParsingError: If EPUB loading fails.
+
+        Note:
+            - Uses temporary directory with context manager for safe cleanup
+            - Sequential image IDs: img_001, img_002, etc.
+            - Position set to 0 (exact position tracking not implemented)
+            - Alt text set to None (HTML parsing not implemented)
         """
-        # TODO: Implement image extraction
-        # This will be implemented in a later task
-        return []
+        try:
+            # Load EPUB file
+            logger.info(f"Loading EPUB for image extraction: {file_path}")
+            book = self._load_epub(file_path)
+
+            # Get all image items from EPUB
+            image_items = list(book.get_items_of_type(ebooklib.ITEM_IMAGE))
+
+            if not image_items:
+                logger.info("No images found in EPUB")
+                return []
+
+            logger.info(f"Found {len(image_items)} images in EPUB")
+
+            # Use context manager for safe temporary directory cleanup
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_path = Path(temp_dir)
+                images: List[ImageReference] = []
+
+                for idx, item in enumerate(image_items, start=1):
+                    try:
+                        # Get image metadata
+                        image_name = item.get_name()  # e.g., "images/cover.jpg"
+                        image_content = item.get_content()  # bytes
+
+                        # Save to temp directory (preserve subdirectory structure)
+                        image_path = temp_path / image_name
+                        image_path.parent.mkdir(parents=True, exist_ok=True)
+
+                        with open(image_path, "wb") as f:
+                            f.write(image_content)
+
+                        # Get image dimensions and format using PIL
+                        width: Optional[int] = None
+                        height: Optional[int] = None
+                        format_name: str = "unknown"
+
+                        try:
+                            with Image.open(image_path) as img:
+                                width, height = img.size
+                                format_name = (
+                                    img.format.lower() if img.format else "unknown"
+                                )
+                        except Exception as e:
+                            logger.warning(f"Could not read image {image_name}: {e}")
+                            self._warnings.append(
+                                f"Could not read image {image_name}: {e}"
+                            )
+
+                        # Create ImageReference
+                        image_ref = ImageReference(
+                            image_id=f"img_{idx:03d}",
+                            position=0,  # We don't track exact position
+                            file_path=str(image_path),
+                            alt_text=None,  # Would require HTML parsing
+                            size=(width, height) if width and height else None,
+                            format=format_name,
+                        )
+
+                        images.append(image_ref)
+                        logger.debug(
+                            f"Extracted image {idx}: {image_name} ({format_name}, {width}x{height})"
+                        )
+
+                    except Exception as e:
+                        logger.warning(f"Failed to extract image {idx}: {e}")
+                        self._warnings.append(f"Failed to extract image: {e}")
+                        # Continue with next image - don't fail entire extraction
+
+                logger.info(f"Successfully extracted {len(images)} images")
+                return images
+
+        except ParsingError:
+            # Re-raise ParsingError from _load_epub
+            raise
+        except Exception as e:
+            logger.error(f"Image extraction failed: {e}")
+            raise ParsingError(
+                f"Failed to extract images from EPUB: {e}",
+                parser="EPUBParser",
+                original_error=e,
+            )
 
     def _count_words(self, text: str) -> int:
         """Count words in text.

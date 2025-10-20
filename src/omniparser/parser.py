@@ -17,8 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def parse_document(
-    file_path: str | Path,
-    options: Optional[Dict[str, Any]] = None
+    file_path: str | Path, options: Optional[Dict[str, Any]] = None
 ) -> Document:
     """Parse a document file and return a universal Document object.
 
@@ -73,36 +72,36 @@ def parse_document(
     logger.info(f"Parsing file: {file_path} (format: {file_extension})")
 
     # EPUB format
-    if file_extension in ['.epub']:
+    if file_extension in [".epub"]:
         parser = EPUBParser(options)
         return parser.parse(file_path)
 
     # PDF format (not yet implemented)
-    elif file_extension in ['.pdf']:
+    elif file_extension in [".pdf"]:
         raise UnsupportedFormatError(
             f"PDF format not yet implemented. Coming in future version."
         )
 
     # DOCX format (not yet implemented)
-    elif file_extension in ['.docx', '.doc']:
+    elif file_extension in [".docx", ".doc"]:
         raise UnsupportedFormatError(
             f"DOCX format not yet implemented. Coming in future version."
         )
 
     # HTML format (not yet implemented)
-    elif file_extension in ['.html', '.htm']:
+    elif file_extension in [".html", ".htm"]:
         raise UnsupportedFormatError(
             f"HTML format not yet implemented. Coming in future version."
         )
 
     # Markdown format (not yet implemented)
-    elif file_extension in ['.md', '.markdown']:
+    elif file_extension in [".md", ".markdown"]:
         raise UnsupportedFormatError(
             f"Markdown format not yet implemented. Coming in future version."
         )
 
     # Text format (not yet implemented)
-    elif file_extension in ['.txt']:
+    elif file_extension in [".txt"]:
         raise UnsupportedFormatError(
             f"Text format not yet implemented. Coming in future version."
         )
@@ -121,7 +120,7 @@ def get_supported_formats() -> list[str]:
     Returns:
         List of file extensions (e.g., ['.epub', '.pdf']).
     """
-    return ['.epub']
+    return [".epub"]
 
 
 def is_format_supported(file_path: str | Path) -> bool:

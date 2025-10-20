@@ -1,0 +1,83 @@
+# Text Cleaning Patterns for OmniParser
+# Adapted from epub2tts, TTS-specific patterns removed
+#
+# This configuration defines regex patterns for text cleaning operations.
+# Patterns are applied in order: removal -> transformation -> whitespace normalization
+
+removal_patterns:
+  # Remove footnote markers
+  - pattern: "\\[\\d+\\]"
+    description: "Footnote markers like [1], [2], [123]"
+
+  # Remove page numbers
+  - pattern: "^\\s*Page \\d+.*$"
+    flags: "MULTILINE"
+    description: "Page number lines"
+
+  # Remove standalone chapter numbers
+  - pattern: "^\\s*Chapter \\d+\\s*$"
+    flags: "MULTILINE"
+    description: "Standalone chapter number lines"
+
+  # Remove HTML tags
+  - pattern: "<[^>]+>"
+    description: "HTML tags"
+
+  # Remove excessive asterisks
+  - pattern: "\\*{3,}"
+    description: "Three or more asterisks used as section breaks"
+
+  # Remove underscores used as section breaks
+  - pattern: "_{3,}"
+    description: "Three or more underscores used as section breaks"
+
+  # Remove standalone page break markers
+  - pattern: "^\\s*[-–—]{3,}\\s*$"
+    flags: "MULTILINE"
+    description: "Horizontal rule lines"
+
+  # Remove Table of Contents headers
+  - pattern: "^\\s*Table of Contents\\s*$"
+    flags: "MULTILINE|IGNORECASE"
+    description: "Table of Contents headers"
+
+transformation_patterns:
+  # Em dash normalization
+  - pattern: "—"
+    replacement: " -- "
+    description: "Em dash to double hyphen with spaces"
+
+  # En dash normalization
+  - pattern: "–"
+    replacement: "-"
+    description: "En dash to single hyphen"
+
+  # Ellipsis normalization
+  - pattern: "…"
+    replacement: "..."
+    description: "Unicode ellipsis to three periods"
+
+  # Smart double quotes to regular quotes
+  - pattern: "[\u201c\u201d\"]"
+    replacement: "\""
+    description: "Smart double quotes to regular quotes"
+
+  # Smart single quotes to regular apostrophe
+  - pattern: "[\u2018\u2019']"
+    replacement: "'"
+    description: "Smart single quotes to regular apostrophe"
+
+  # Non-breaking space to regular space
+  - pattern: "\\u00A0"
+    replacement: " "
+    description: "Non-breaking space to regular space"
+
+  # Multiple spaces to single space
+  - pattern: " {2,}"
+    replacement: " "
+    description: "Multiple consecutive spaces to single space"
+
+  # Tab to space
+  - pattern: "\\t"
+    replacement: " "
+    description: "Tab characters to single space"
