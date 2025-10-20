@@ -67,6 +67,9 @@ class EPUBParser(BaseParser):
 
     Options:
         extract_images (bool): Extract images from EPUB. Default: True
+        image_output_dir (str|Path): Directory to save extracted images.
+            If None (default), images are saved to temp directory and deleted after parsing.
+            If set, images are saved persistently to the specified directory.
         detect_chapters (bool): Enable chapter detection. Default: True
         clean_text (bool): Apply text cleaning. Default: True
         min_chapter_length (int): Minimum words per chapter. Default: 100
@@ -90,6 +93,7 @@ class EPUBParser(BaseParser):
 
         # Set default options
         self.options.setdefault("extract_images", True)
+        self.options.setdefault("image_output_dir", None)
         self.options.setdefault("detect_chapters", True)
         self.options.setdefault("clean_text", True)
         self.options.setdefault("min_chapter_length", 100)
@@ -865,8 +869,8 @@ class EPUBParser(BaseParser):
     def extract_images(self, file_path: Path) -> List[ImageReference]:
         """Extract images from EPUB file.
 
-        Extracts all images from the EPUB, saves them to a temporary directory,
-        and creates ImageReference objects with dimensions and format information.
+        Extracts all images from the EPUB and saves them to either a temporary
+        directory (default) or a persistent directory if image_output_dir option is set.
 
         Args:
             file_path: Path to EPUB file.
@@ -878,10 +882,12 @@ class EPUBParser(BaseParser):
             ParsingError: If EPUB loading fails.
 
         Note:
-            - Uses temporary directory with context manager for safe cleanup
+            - If image_output_dir is None: uses temp directory (auto-cleanup)
+            - If image_output_dir is set: saves to persistent directory
             - Sequential image IDs: img_001, img_002, etc.
             - Position set to 0 (exact position tracking not implemented)
             - Alt text set to None (HTML parsing not implemented)
+            - Preserves EPUB internal directory structure (e.g., images/cover.jpg)
         """
         try:
             # Load EPUB file
@@ -897,63 +903,30 @@ class EPUBParser(BaseParser):
 
             logger.info(f"Found {len(image_items)} images in EPUB")
 
-            # Use context manager for safe temporary directory cleanup
-            with tempfile.TemporaryDirectory() as temp_dir:
-                temp_path = Path(temp_dir)
-                images: List[ImageReference] = []
+            # Determine output directory
+            image_output_dir = self.options.get("image_output_dir")
+            use_persistent_dir = image_output_dir is not None
 
-                for idx, item in enumerate(image_items, start=1):
-                    try:
-                        # Get image metadata
-                        image_name = item.get_name()  # e.g., "images/cover.jpg"
-                        image_content = item.get_content()  # bytes
+            if use_persistent_dir:
+                # Convert to Path and create directory
+                output_path = Path(image_output_dir)
+                output_path.mkdir(parents=True, exist_ok=True)
+                logger.info(f"Saving images to persistent directory: {output_path}")
 
-                        # Save to temp directory (preserve subdirectory structure)
-                        image_path = temp_path / image_name
-                        image_path.parent.mkdir(parents=True, exist_ok=True)
-
-                        with open(image_path, "wb") as f:
-                            f.write(image_content)
-
-                        # Get image dimensions and format using PIL
-                        width: Optional[int] = None
-                        height: Optional[int] = None
-                        format_name: str = "unknown"
-
-                        try:
-                            with Image.open(image_path) as img:
-                                width, height = img.size
-                                format_name = (
-                                    img.format.lower() if img.format else "unknown"
-                                )
-                        except Exception as e:
-                            logger.warning(f"Could not read image {image_name}: {e}")
-                            self._warnings.append(
-                                f"Could not read image {image_name}: {e}"
-                            )
-
-                        # Create ImageReference
-                        image_ref = ImageReference(
-                            image_id=f"img_{idx:03d}",
-                            position=0,  # We don't track exact position
-                            file_path=str(image_path),
-                            alt_text=None,  # Would require HTML parsing
-                            size=(width, height) if width and height else None,
-                            format=format_name,
-                        )
-
-                        images.append(image_ref)
-                        logger.debug(
-                            f"Extracted image {idx}: {image_name} ({format_name}, {width}x{height})"
-                        )
-
-                    except Exception as e:
-                        logger.warning(f"Failed to extract image {idx}: {e}")
-                        self._warnings.append(f"Failed to extract image: {e}")
-                        # Continue with next image - don't fail entire extraction
-
-                logger.info(f"Successfully extracted {len(images)} images")
+                # Extract images to persistent directory
+                images = self._extract_images_to_directory(image_items, output_path)
+                logger.info(
+                    f"Successfully extracted {len(images)} images to {output_path}"
+                )
                 return images
+            else:
+                # Use temporary directory with context manager for safe cleanup
+                logger.info("Saving images to temporary directory (will be deleted)")
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    temp_path = Path(temp_dir)
+                    images = self._extract_images_to_directory(image_items, temp_path)
+                    logger.info(f"Successfully extracted {len(images)} images")
+                    return images
 
         except ParsingError:
             # Re-raise ParsingError from _load_epub
@@ -965,6 +938,71 @@ class EPUBParser(BaseParser):
                 parser="EPUBParser",
                 original_error=e,
             )
+
+    def _extract_images_to_directory(
+        self, image_items: List, output_path: Path
+    ) -> List[ImageReference]:
+        """Extract images to specified directory.
+
+        Helper method that performs the actual image extraction and saves to
+        the provided directory path.
+
+        Args:
+            image_items: List of EPUB image items from ebooklib.
+            output_path: Directory path to save images to.
+
+        Returns:
+            List of ImageReference objects with file paths pointing to saved images.
+        """
+        images: List[ImageReference] = []
+
+        for idx, item in enumerate(image_items, start=1):
+            try:
+                # Get image metadata
+                image_name = item.get_name()  # e.g., "images/cover.jpg"
+                image_content = item.get_content()  # bytes
+
+                # Save to output directory (preserve subdirectory structure)
+                image_path = output_path / image_name
+                image_path.parent.mkdir(parents=True, exist_ok=True)
+
+                with open(image_path, "wb") as f:
+                    f.write(image_content)
+
+                # Get image dimensions and format using PIL
+                width: Optional[int] = None
+                height: Optional[int] = None
+                format_name: str = "unknown"
+
+                try:
+                    with Image.open(image_path) as img:
+                        width, height = img.size
+                        format_name = img.format.lower() if img.format else "unknown"
+                except Exception as e:
+                    logger.warning(f"Could not read image {image_name}: {e}")
+                    self._warnings.append(f"Could not read image {image_name}: {e}")
+
+                # Create ImageReference
+                image_ref = ImageReference(
+                    image_id=f"img_{idx:03d}",
+                    position=0,  # We don't track exact position
+                    file_path=str(image_path),
+                    alt_text=None,  # Would require HTML parsing
+                    size=(width, height) if width and height else None,
+                    format=format_name,
+                )
+
+                images.append(image_ref)
+                logger.debug(
+                    f"Extracted image {idx}: {image_name} ({format_name}, {width}x{height})"
+                )
+
+            except Exception as e:
+                logger.warning(f"Failed to extract image {idx}: {e}")
+                self._warnings.append(f"Failed to extract image: {e}")
+                # Continue with next image - don't fail entire extraction
+
+        return images
 
     def _count_words(self, text: str) -> int:
         """Count words in text.

@@ -4,13 +4,21 @@ EPUB to Markdown Converter
 
 Demonstrates OmniParser's EPUB parsing capabilities by converting an EPUB file
 to a clean, well-formatted Markdown document with proper headers, chapters,
-and metadata.
+metadata, and embedded images.
+
+Features:
+- Extracts images to persistent directory ({output_name}_images/)
+- Embeds images in markdown using relative paths (Obsidian-compatible)
+- Preserves chapter structure and metadata
+- Generates table of contents with anchor links
+- Includes document statistics
 
 Usage:
     python examples/epub_to_markdown.py <input.epub> [output.md]
 
 Example:
     python examples/epub_to_markdown.py book.epub book.md
+    # Creates: book.md and book_images/ directory with all images
 """
 
 import sys
@@ -20,21 +28,37 @@ from datetime import datetime
 from omniparser import parse_document
 
 
-def epub_to_markdown(epub_path: Path, output_path: Path) -> None:
-    """Convert EPUB to Markdown file.
+def epub_to_markdown(
+    epub_path: Path, output_path: Path, extract_images: bool = True
+) -> None:
+    """Convert EPUB to Markdown file with optional image extraction.
 
     Args:
         epub_path: Path to input EPUB file.
         output_path: Path to output Markdown file.
+        extract_images: If True, extracts images to {output_name}_images/ directory.
     """
     print(f"📚 Parsing EPUB: {epub_path.name}")
     print(f"   File size: {epub_path.stat().st_size / 1024 / 1024:.2f} MB")
     print()
 
-    # Parse the EPUB
+    # Determine image output directory
+    image_dir = None
+    if extract_images:
+        # Create image directory: book.md -> book_images/
+        image_dir_name = output_path.stem + "_images"
+        image_dir = output_path.parent / image_dir_name
+        print(f"🖼️  Images will be saved to: {image_dir}")
+        print()
+
+    # Parse the EPUB with image extraction options
     import time
+
     start = time.time()
-    doc = parse_document(epub_path)
+    options = {}
+    if image_dir:
+        options["image_output_dir"] = str(image_dir)
+    doc = parse_document(epub_path, options=options)
     elapsed = time.time() - start
 
     print(f"✅ Parsed successfully in {elapsed:.2f} seconds")
@@ -58,7 +82,9 @@ def epub_to_markdown(epub_path: Path, output_path: Path) -> None:
     if doc.metadata.publisher:
         markdown_lines.append(f"publisher: {doc.metadata.publisher}")
     if doc.metadata.publication_date:
-        markdown_lines.append(f"published: {doc.metadata.publication_date.strftime('%Y-%m-%d')}")
+        markdown_lines.append(
+            f"published: {doc.metadata.publication_date.strftime('%Y-%m-%d')}"
+        )
     if doc.metadata.language:
         markdown_lines.append(f"language: {doc.metadata.language}")
     if doc.metadata.isbn:
@@ -93,7 +119,9 @@ def epub_to_markdown(epub_path: Path, output_path: Path) -> None:
         for i, chapter in enumerate(doc.chapters, 1):
             # Indent based on chapter level
             indent = "  " * (chapter.level - 1)
-            markdown_lines.append(f"{indent}{i}. [{chapter.title}](#{_to_anchor(chapter.title)})")
+            markdown_lines.append(
+                f"{indent}{i}. [{chapter.title}](#{_to_anchor(chapter.title)})"
+            )
         markdown_lines.append("")
         markdown_lines.append("---")
         markdown_lines.append("")
@@ -111,6 +139,36 @@ def epub_to_markdown(epub_path: Path, output_path: Path) -> None:
         markdown_lines.append("---")
         markdown_lines.append("")
 
+    # Add images section if images were extracted
+    if doc.images and image_dir:
+        markdown_lines.append("## Images")
+        markdown_lines.append("")
+        markdown_lines.append(
+            f"This document contains {len(doc.images)} images extracted from the EPUB:"
+        )
+        markdown_lines.append("")
+
+        for img in doc.images:
+            # Get relative path from markdown file to image
+            img_path = Path(img.file_path)
+            try:
+                # Try to make it relative to the markdown file location
+                relative_path = img_path.relative_to(output_path.parent)
+            except ValueError:
+                # If that fails, use the full path
+                relative_path = img_path
+
+            # Create markdown image embed
+            alt_text = img.alt_text or f"Image {img.image_id}"
+            size_info = f" ({img.size[0]}x{img.size[1]})" if img.size else ""
+            markdown_lines.append(f"### {img.image_id}{size_info}")
+            markdown_lines.append("")
+            markdown_lines.append(f"![{alt_text}]({relative_path})")
+            markdown_lines.append("")
+
+        markdown_lines.append("---")
+        markdown_lines.append("")
+
     # Add footer with statistics
     markdown_lines.append("---")
     markdown_lines.append("")
@@ -118,15 +176,19 @@ def epub_to_markdown(epub_path: Path, output_path: Path) -> None:
     markdown_lines.append("")
     markdown_lines.append(f"- **Total Chapters:** {len(doc.chapters)}")
     markdown_lines.append(f"- **Total Words:** {doc.word_count:,}")
-    markdown_lines.append(f"- **Estimated Reading Time:** {doc.estimated_reading_time} minutes")
+    markdown_lines.append(
+        f"- **Estimated Reading Time:** {doc.estimated_reading_time} minutes"
+    )
     markdown_lines.append(f"- **Images:** {len(doc.images)}")
     markdown_lines.append(f"- **Original Format:** EPUB")
     markdown_lines.append("")
-    markdown_lines.append(f"*Converted from {epub_path.name} using [OmniParser](https://github.com/AutumnsGrove/omniparser)*")
+    markdown_lines.append(
+        f"*Converted from {epub_path.name} using [OmniParser](https://github.com/AutumnsGrove/omniparser)*"
+    )
 
     # Write to file
     markdown_content = "\n".join(markdown_lines)
-    output_path.write_text(markdown_content, encoding='utf-8')
+    output_path.write_text(markdown_content, encoding="utf-8")
 
     print(f"✅ Markdown file created: {output_path}")
     print(f"   📄 Size: {output_path.stat().st_size / 1024:.1f} KB")
@@ -181,7 +243,7 @@ def main():
         print(f"❌ Error: File not found: {epub_path}")
         sys.exit(1)
 
-    if not epub_path.suffix.lower() == '.epub':
+    if not epub_path.suffix.lower() == ".epub":
         print(f"❌ Error: File must be an EPUB (.epub extension)")
         sys.exit(1)
 
@@ -190,12 +252,12 @@ def main():
         output_path = Path(sys.argv[2])
     else:
         # Default: same name as input but with .md extension
-        output_path = epub_path.with_suffix('.md')
+        output_path = epub_path.with_suffix(".md")
 
     # Check if output file exists
     if output_path.exists():
         response = input(f"⚠️  Output file exists: {output_path}\nOverwrite? [y/N]: ")
-        if response.lower() != 'y':
+        if response.lower() != "y":
             print("Cancelled.")
             sys.exit(0)
 
@@ -205,6 +267,7 @@ def main():
     except Exception as e:
         print(f"❌ Error during conversion: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

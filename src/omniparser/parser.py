@@ -37,6 +37,8 @@ def parse_document(
         options: Optional parser configuration dict. Options vary by format.
             Common options:
             - extract_images (bool): Extract images. Default: True
+            - image_output_dir (str|Path): Directory to save extracted images.
+              If None, images are saved to temp directory. Default: None
             - clean_text (bool): Apply text cleaning. Default: True
             - detect_chapters (bool): Detect chapter structure. Default: True
 

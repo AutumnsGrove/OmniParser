@@ -22,6 +22,7 @@ class TestEPUBParserInit:
         parser = EPUBParser()
         assert parser.options == {
             "extract_images": True,
+            "image_output_dir": None,
             "detect_chapters": True,
             "clean_text": True,
             "min_chapter_length": 100,
