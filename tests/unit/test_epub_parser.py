@@ -430,6 +430,395 @@ class TestEPUBParserMetadataExtraction:
         assert metadata.file_size == 1000
 
 
+class TestEPUBParserTocExtraction:
+    """Test table of contents extraction."""
+
+    def test_extract_toc_flat_structure(self) -> None:
+        """Test TOC extraction with flat (single-level) structure."""
+        from unittest.mock import MagicMock
+
+        parser = EPUBParser()
+        parser._warnings = []
+
+        # Create mock TOC with flat structure (list of Links)
+        mock_link1 = MagicMock()
+        mock_link1.title = "Chapter 1"
+        mock_link1.href = "chapter1.xhtml"
+
+        mock_link2 = MagicMock()
+        mock_link2.title = "Chapter 2"
+        mock_link2.href = "chapter2.xhtml"
+
+        mock_link3 = MagicMock()
+        mock_link3.title = "Chapter 3"
+        mock_link3.href = "chapter3.xhtml"
+
+        mock_book = MagicMock()
+        mock_book.toc = [mock_link1, mock_link2, mock_link3]
+
+        # Extract TOC
+        toc_entries = parser._extract_toc(mock_book)
+
+        # Verify results
+        assert toc_entries is not None
+        assert len(toc_entries) == 3
+
+        assert toc_entries[0].title == "Chapter 1"
+        assert toc_entries[0].href == "chapter1.xhtml"
+        assert toc_entries[0].level == 1
+        assert toc_entries[0].children == []
+
+        assert toc_entries[1].title == "Chapter 2"
+        assert toc_entries[1].href == "chapter2.xhtml"
+        assert toc_entries[1].level == 1
+
+        assert toc_entries[2].title == "Chapter 3"
+        assert toc_entries[2].href == "chapter3.xhtml"
+        assert toc_entries[2].level == 1
+
+    def test_extract_toc_nested_structure(self) -> None:
+        """Test TOC extraction with nested (multi-level) structure."""
+        from unittest.mock import MagicMock
+
+        parser = EPUBParser()
+        parser._warnings = []
+
+        # Create mock nested TOC structure
+        # Chapter 1
+        #   Section 1.1
+        #   Section 1.2
+        # Chapter 2
+
+        mock_link1 = MagicMock()
+        mock_link1.title = "Chapter 1"
+        mock_link1.href = "chapter1.xhtml"
+
+        mock_subsection1 = MagicMock()
+        mock_subsection1.title = "Section 1.1"
+        mock_subsection1.href = "chapter1.xhtml#s1"
+
+        mock_subsection2 = MagicMock()
+        mock_subsection2.title = "Section 1.2"
+        mock_subsection2.href = "chapter1.xhtml#s2"
+
+        mock_link2 = MagicMock()
+        mock_link2.title = "Chapter 2"
+        mock_link2.href = "chapter2.xhtml"
+
+        # Structure as tuple (parent, [children])
+        mock_book = MagicMock()
+        mock_book.toc = [
+            (mock_link1, [mock_subsection1, mock_subsection2]),
+            mock_link2
+        ]
+
+        # Extract TOC
+        toc_entries = parser._extract_toc(mock_book)
+
+        # Verify flattened structure with correct levels
+        assert toc_entries is not None
+        assert len(toc_entries) == 4
+
+        # Chapter 1 (level 1)
+        assert toc_entries[0].title == "Chapter 1"
+        assert toc_entries[0].href == "chapter1.xhtml"
+        assert toc_entries[0].level == 1
+
+        # Section 1.1 (level 2)
+        assert toc_entries[1].title == "Section 1.1"
+        assert toc_entries[1].href == "chapter1.xhtml#s1"
+        assert toc_entries[1].level == 2
+
+        # Section 1.2 (level 2)
+        assert toc_entries[2].title == "Section 1.2"
+        assert toc_entries[2].href == "chapter1.xhtml#s2"
+        assert toc_entries[2].level == 2
+
+        # Chapter 2 (level 1)
+        assert toc_entries[3].title == "Chapter 2"
+        assert toc_entries[3].href == "chapter2.xhtml"
+        assert toc_entries[3].level == 1
+
+    def test_extract_toc_deeply_nested(self) -> None:
+        """Test TOC extraction with deeply nested structure (3+ levels)."""
+        from unittest.mock import MagicMock
+
+        parser = EPUBParser()
+        parser._warnings = []
+
+        # Create deeply nested TOC
+        # Chapter 1
+        #   Section 1.1
+        #     Subsection 1.1.1
+        #     Subsection 1.1.2
+
+        mock_chapter = MagicMock()
+        mock_chapter.title = "Chapter 1"
+        mock_chapter.href = "ch1.xhtml"
+
+        mock_section = MagicMock()
+        mock_section.title = "Section 1.1"
+        mock_section.href = "ch1.xhtml#s1"
+
+        mock_subsub1 = MagicMock()
+        mock_subsub1.title = "Subsection 1.1.1"
+        mock_subsub1.href = "ch1.xhtml#s1.1"
+
+        mock_subsub2 = MagicMock()
+        mock_subsub2.title = "Subsection 1.1.2"
+        mock_subsub2.href = "ch1.xhtml#s1.2"
+
+        mock_book = MagicMock()
+        mock_book.toc = [
+            (mock_chapter, [
+                (mock_section, [mock_subsub1, mock_subsub2])
+            ])
+        ]
+
+        # Extract TOC
+        toc_entries = parser._extract_toc(mock_book)
+
+        # Verify all levels
+        assert toc_entries is not None
+        assert len(toc_entries) == 4
+
+        assert toc_entries[0].title == "Chapter 1"
+        assert toc_entries[0].level == 1
+
+        assert toc_entries[1].title == "Section 1.1"
+        assert toc_entries[1].level == 2
+
+        assert toc_entries[2].title == "Subsection 1.1.1"
+        assert toc_entries[2].level == 3
+
+        assert toc_entries[3].title == "Subsection 1.1.2"
+        assert toc_entries[3].level == 3
+
+    def test_extract_toc_empty_returns_none(self) -> None:
+        """Test that empty TOC returns None."""
+        from unittest.mock import MagicMock
+
+        parser = EPUBParser()
+        parser._warnings = []
+
+        # Empty TOC
+        mock_book = MagicMock()
+        mock_book.toc = []
+
+        result = parser._extract_toc(mock_book)
+        assert result is None
+
+    def test_extract_toc_none_returns_none(self) -> None:
+        """Test that None TOC returns None."""
+        from unittest.mock import MagicMock
+
+        parser = EPUBParser()
+        parser._warnings = []
+
+        # None TOC
+        mock_book = MagicMock()
+        mock_book.toc = None
+
+        result = parser._extract_toc(mock_book)
+        assert result is None
+
+    def test_extract_toc_handles_missing_title(self) -> None:
+        """Test TOC extraction handles entries with missing titles."""
+        from unittest.mock import MagicMock
+
+        parser = EPUBParser()
+        parser._warnings = []
+
+        # Link with None title
+        mock_link = MagicMock()
+        mock_link.title = None
+        mock_link.href = "chapter1.xhtml"
+
+        mock_book = MagicMock()
+        mock_book.toc = [mock_link]
+
+        toc_entries = parser._extract_toc(mock_book)
+
+        # Should default to "Untitled"
+        assert toc_entries is not None
+        assert len(toc_entries) == 1
+        assert toc_entries[0].title == "Untitled"
+        assert toc_entries[0].href == "chapter1.xhtml"
+
+    def test_extract_toc_handles_missing_href(self) -> None:
+        """Test TOC extraction handles entries with missing href."""
+        from unittest.mock import MagicMock
+
+        parser = EPUBParser()
+        parser._warnings = []
+
+        # Link with None href
+        mock_link = MagicMock()
+        mock_link.title = "Chapter 1"
+        mock_link.href = None
+
+        mock_book = MagicMock()
+        mock_book.toc = [mock_link]
+
+        toc_entries = parser._extract_toc(mock_book)
+
+        # Should default to empty string
+        assert toc_entries is not None
+        assert len(toc_entries) == 1
+        assert toc_entries[0].title == "Chapter 1"
+        assert toc_entries[0].href == ""
+
+    def test_extract_toc_handles_section_without_href(self) -> None:
+        """Test TOC extraction handles Section objects without href."""
+        from unittest.mock import MagicMock
+
+        parser = EPUBParser()
+        parser._warnings = []
+
+        # Section with only title (no href attribute)
+        mock_section = MagicMock()
+        mock_section.title = "Part One"
+        # Remove href attribute
+        del mock_section.href
+
+        mock_child = MagicMock()
+        mock_child.title = "Chapter 1"
+        mock_child.href = "ch1.xhtml"
+
+        mock_book = MagicMock()
+        mock_book.toc = [(mock_section, [mock_child])]
+
+        toc_entries = parser._extract_toc(mock_book)
+
+        # Should handle missing href gracefully
+        assert toc_entries is not None
+        assert len(toc_entries) == 2
+        assert toc_entries[0].title == "Part One"
+        assert toc_entries[0].href == ""
+        assert toc_entries[1].title == "Chapter 1"
+        assert toc_entries[1].href == "ch1.xhtml"
+
+    def test_extract_toc_exception_handling(self) -> None:
+        """Test TOC extraction handles exceptions gracefully."""
+        from unittest.mock import MagicMock, PropertyMock
+
+        parser = EPUBParser()
+        parser._warnings = []
+
+        # Mock book that raises exception when accessing toc
+        mock_book = MagicMock()
+        type(mock_book).toc = PropertyMock(side_effect=Exception("TOC error"))
+
+        # Should return None and log warning
+        result = parser._extract_toc(mock_book)
+        assert result is None
+        assert len(parser._warnings) > 0
+        assert "TOC extraction failed" in parser._warnings[0]
+
+    def test_extract_toc_malformed_entry_in_list(self) -> None:
+        """Test that malformed TOC entries in list are handled gracefully."""
+        from unittest.mock import MagicMock
+
+        parser = EPUBParser()
+        parser._warnings = []
+
+        # Create valid link followed by an object with no title/href attributes
+        mock_link1 = MagicMock()
+        mock_link1.title = "Chapter 1"
+        mock_link1.href = "chapter1.xhtml"
+
+        # Object that doesn't have title or href attributes (unknown structure)
+        mock_bad_link = MagicMock(spec=['some_other_attr'])
+
+        mock_link2 = MagicMock()
+        mock_link2.title = "Chapter 2"
+        mock_link2.href = "chapter2.xhtml"
+
+        mock_book = MagicMock()
+        mock_book.toc = [mock_link1, mock_bad_link, mock_link2]
+
+        toc_entries = parser._extract_toc(mock_book)
+
+        # Should extract valid entries and log warning about bad one
+        assert toc_entries is not None
+        assert len(toc_entries) == 2  # Only the valid ones
+        assert toc_entries[0].title == "Chapter 1"
+        assert toc_entries[1].title == "Chapter 2"
+
+        # Should have warning about unknown structure
+        assert len(parser._warnings) > 0
+        assert "Unknown TOC item" in str(parser._warnings)
+
+    def test_extract_toc_unknown_structure_warning(self) -> None:
+        """Test that unknown TOC structures generate warnings."""
+        from unittest.mock import MagicMock
+
+        parser = EPUBParser()
+        parser._warnings = []
+
+        # Create unknown structure (e.g., plain string)
+        mock_book = MagicMock()
+        mock_book.toc = ["invalid_structure"]
+
+        result = parser._extract_toc(mock_book)
+
+        # Should return None or empty
+        assert result is None or len(result) == 0
+
+        # Should have warning about unknown type
+        assert len(parser._warnings) > 0
+        assert "Unknown TOC item" in str(parser._warnings) or "TOC extraction failed" in str(parser._warnings)
+
+    def test_extract_toc_mixed_structure(self) -> None:
+        """Test TOC with mixed flat and nested entries."""
+        from unittest.mock import MagicMock
+
+        parser = EPUBParser()
+        parser._warnings = []
+
+        # Mixed structure: some with children, some without
+        mock_link1 = MagicMock()
+        mock_link1.title = "Chapter 1"
+        mock_link1.href = "ch1.xhtml"
+
+        mock_link2 = MagicMock()
+        mock_link2.title = "Chapter 2"
+        mock_link2.href = "ch2.xhtml"
+
+        mock_subsection = MagicMock()
+        mock_subsection.title = "Section 2.1"
+        mock_subsection.href = "ch2.xhtml#s1"
+
+        mock_link3 = MagicMock()
+        mock_link3.title = "Chapter 3"
+        mock_link3.href = "ch3.xhtml"
+
+        mock_book = MagicMock()
+        mock_book.toc = [
+            mock_link1,
+            (mock_link2, [mock_subsection]),
+            mock_link3
+        ]
+
+        toc_entries = parser._extract_toc(mock_book)
+
+        # Verify mixed structure is flattened correctly
+        assert toc_entries is not None
+        assert len(toc_entries) == 4
+
+        assert toc_entries[0].title == "Chapter 1"
+        assert toc_entries[0].level == 1
+
+        assert toc_entries[1].title == "Chapter 2"
+        assert toc_entries[1].level == 1
+
+        assert toc_entries[2].title == "Section 2.1"
+        assert toc_entries[2].level == 2
+
+        assert toc_entries[3].title == "Chapter 3"
+        assert toc_entries[3].level == 1
+
+
 # Note: Full integration tests with real EPUB files will be in
 # tests/integration/test_epub_parsing.py
 # These unit tests focus on individual method behavior

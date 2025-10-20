@@ -386,15 +386,116 @@ class EPUBParser(BaseParser):
     def _extract_toc(self, book: epub.EpubBook) -> Optional[List[TocEntry]]:
         """Extract table of contents from EPUB.
 
+        Parses the EPUB's table of contents structure and converts it to a flat
+        list of TocEntry objects. Handles nested TOC structures by preserving
+        hierarchy information via the level attribute.
+
         Args:
             book: EpubBook object.
 
         Returns:
-            List of TocEntry objects, or None if TOC is missing/empty.
+            Flat list of TocEntry objects with level indicating hierarchy,
+            or None if TOC is missing/empty.
+
+        Note:
+            The returned list is flattened - all TocEntry objects have empty
+            children lists, but the level attribute indicates nesting depth
+            (1=main chapter, 2=subsection, etc.).
         """
-        # TODO: Implement TOC extraction
-        # This will be implemented in a later task
-        return None
+        try:
+            toc = book.toc
+
+            # Check if TOC is empty or None
+            if not toc:
+                logger.info("EPUB has no table of contents")
+                return None
+
+            # Parse TOC structure recursively
+            flat_toc: List[TocEntry] = []
+            self._parse_toc_item(toc, flat_toc, level=1)
+
+            # Return None if parsing produced no entries
+            if not flat_toc:
+                logger.info("EPUB TOC parsing produced no entries")
+                return None
+
+            logger.info(f"Extracted {len(flat_toc)} TOC entries")
+            return flat_toc
+
+        except Exception as e:
+            logger.warning(f"Failed to extract TOC: {e}")
+            self._warnings.append(f"TOC extraction failed: {e}")
+            return None
+
+    def _parse_toc_item(
+        self,
+        items: Any,
+        flat_toc: List[TocEntry],
+        level: int = 1
+    ) -> None:
+        """Recursively parse TOC items into flat list.
+
+        Handles various TOC structures from ebooklib:
+        - Individual epub.Link objects
+        - Tuples of (Section, [children])
+        - Lists of Links or nested tuples
+
+        Args:
+            items: TOC item(s) to parse (Link, tuple, or list).
+            flat_toc: Accumulator list for flattened TocEntry objects.
+            level: Current hierarchy level (1=top-level, 2=subsection, etc.).
+        """
+        # Handle list of items
+        if isinstance(items, list):
+            for item in items:
+                self._parse_toc_item(item, flat_toc, level)
+            return
+
+        # Handle tuple (Section, children)
+        if isinstance(items, tuple):
+            if len(items) >= 2:
+                section, children = items[0], items[1]
+
+                # Process section (could be Link or Section)
+                if hasattr(section, 'title') and hasattr(section, 'href'):
+                    # It's a Link
+                    try:
+                        title = section.title or "Untitled"
+                        href = section.href or ""
+                        flat_toc.append(TocEntry(title=title, href=href, level=level))
+                    except Exception as e:
+                        logger.warning(f"Failed to parse TOC Link: {e}")
+                        self._warnings.append(f"Malformed TOC Link: {e}")
+                elif hasattr(section, 'title'):
+                    # It's a Section (has title but maybe no href)
+                    try:
+                        title = section.title or "Untitled"
+                        # Sections might not have href - use empty string
+                        href = getattr(section, 'href', '')
+                        flat_toc.append(TocEntry(title=title, href=href, level=level))
+                    except Exception as e:
+                        logger.warning(f"Failed to parse TOC Section: {e}")
+                        self._warnings.append(f"Malformed TOC Section: {e}")
+
+                # Recursively process children at deeper level
+                if children:
+                    self._parse_toc_item(children, flat_toc, level + 1)
+            return
+
+        # Handle individual epub.Link
+        if hasattr(items, 'title') and hasattr(items, 'href'):
+            try:
+                title = items.title or "Untitled"
+                href = items.href or ""
+                flat_toc.append(TocEntry(title=title, href=href, level=level))
+            except Exception as e:
+                logger.warning(f"Failed to parse TOC item: {e}")
+                self._warnings.append(f"Malformed TOC item: {e}")
+            return
+
+        # Unknown structure - log warning
+        logger.warning(f"Unknown TOC item structure: {type(items)}")
+        self._warnings.append(f"Unknown TOC item type: {type(items).__name__}")
 
     def _extract_content_and_chapters(
         self,
