@@ -2,6 +2,36 @@
 
 This file provides guidance to Claude Code when working with code in this repository.
 
+<!-- BaseProject: Project Overview -->
+## Project Overview
+
+**Project:** OmniParser - Universal Document Parser
+**Purpose:** Transform any document, web page, or structured data into clean, standardized markdown with comprehensive metadata extraction
+**Status:** Phase 2.3 Complete - EPUB Parser Production-Ready (v0.1.0)
+
+**Tech Stack:**
+- **Language:** Python 3.10+
+- **Package Manager:** UV (modern Python package manager)
+- **Build System:** Hatchling
+- **Key Libraries:** ebooklib (EPUB), PyMuPDF (PDF planned), python-docx (DOCX planned), BeautifulSoup4 (HTML parsing), ftfy (text processing)
+- **Testing:** pytest, pytest-cov
+- **Code Quality:** Black formatter, mypy type checking
+
+**Architecture:**
+- Modular parser architecture with `BaseParser` abstract class
+- Format-specific parsers (EPUBParser implemented, PDF/DOCX/HTML planned)
+- Universal `Document` data model for consistent output across all formats
+- Post-processing components (chapter detection, text cleaning, metadata extraction)
+- Comprehensive test suite (357 tests, 100% passing)
+
+**Key Resources:**
+- Full specification: `OMNIPARSER_PROJECT_SPEC.md` (36,000 words)
+- Architecture plan: `ARCHITECTURE_PLAN.md` (40,000 words, 16 phases)
+- Implementation reference: `IMPLEMENTATION_REFERENCE.md` (16,000 words)
+- Visual diagrams: `ARCHITECTURE_DIAGRAMS.md` (37,000 words)
+
+<!-- /BaseProject: Project Overview -->
+
 ## Git Commit Standards
 
 **CRITICAL:** All commits in this repository MUST follow the conventional commit style documented in `GIT_COMMIT_STYLE_GUIDE.md`.
@@ -479,6 +509,106 @@ git commit -m "type: msg" # Commit (follow style guide!)
 1. Format: `uv run black .`
 2. Test: `uv run pytest`
 3. Check commit message format (see GIT_COMMIT_STYLE_GUIDE.md)
+
+---
+
+<!-- BaseProject: Essential Instructions -->
+## Essential Instructions (Always Follow)
+
+### Core Behavior
+- Do what has been asked; nothing more, nothing less
+- NEVER create files unless absolutely necessary for achieving your goal
+- ALWAYS prefer editing existing files to creating new ones
+- NEVER proactively create documentation files (*.md) or README files unless explicitly requested
+
+### Naming Conventions
+- **Directories**: Use CamelCase (e.g., `VideoProcessor`, `AudioTools`, `DataAnalysis`)
+- **Date-based paths**: Use skewer-case with YYYY-MM-DD (e.g., `logs-2025-01-15`, `backup-2025-12-31`)
+- **No spaces or underscores** in directory names (except date-based paths where appropriate)
+
+### TODO Management
+- **Always check `TODOS.md` first** when starting a task or session
+- **Update immediately** when tasks are completed, added, or changed
+- Keep the list current and manageable
+
+<!-- /BaseProject: Essential Instructions -->
+
+---
+
+<!-- BaseProject: ClaudeUsage Guide Index -->
+## When to Read Specific Guides
+
+**The `ClaudeUsage/` directory contains comprehensive workflow guides. Read the full guide when you encounter these situations:**
+
+### Secrets & API Keys
+- **When managing API keys or secrets** → Read `ClaudeUsage/secrets_management.md`
+- **Before implementing secrets loading** → Read `ClaudeUsage/secrets_management.md`
+- **For advanced security patterns** → Read `ClaudeUsage/secrets_advanced.md`
+
+### Package Management
+- **When using UV package manager** → Read `ClaudeUsage/uv_usage.md`
+- **Before creating/modifying pyproject.toml** → Read `ClaudeUsage/uv_usage.md`
+- **When managing Python dependencies** → Read `ClaudeUsage/uv_usage.md`
+
+### Version Control
+- **For detailed git workflow** → Read `ClaudeUsage/git_workflow.md`
+- **For conventional commits** → Read `ClaudeUsage/git_conventional_commits.md`
+- **For commit message best practices** → Read `ClaudeUsage/git_commit_guide.md`
+
+### Search & Research
+- **When searching across 20+ files** → Read `ClaudeUsage/house_agents.md`
+- **When finding patterns in codebase** → Read `ClaudeUsage/house_agents.md`
+- **For complex multi-step research** → Read `ClaudeUsage/research_workflow.md`
+
+### Testing
+- **Before writing tests** → Read `ClaudeUsage/testing_strategies.md`
+- **When implementing test coverage** → Read `ClaudeUsage/testing_strategies.md`
+- **For test organization patterns** → Read `ClaudeUsage/testing_strategies.md`
+
+### Code Quality
+- **When refactoring code** → Read `ClaudeUsage/code_style_guide.md`
+- **Before major code changes** → Read `ClaudeUsage/code_quality.md`
+- **For documentation standards** → Read `ClaudeUsage/documentation_standards.md`
+
+### Project Setup & Structure
+- **When setting up new components** → Read `ClaudeUsage/project_setup.md`
+- **For directory structure patterns** → Read `ClaudeUsage/project_structure.md`
+- **Setting up CI/CD** → Read `ClaudeUsage/ci_cd_patterns.md`
+
+### Docker & Deployment
+- **When containerizing the application** → Read `ClaudeUsage/docker_guide.md`
+- **For multi-stage Docker builds** → Read `ClaudeUsage/docker_guide.md`
+
+### Multi-Language Projects
+- **When working with multiple languages** → Read `ClaudeUsage/multi_language_guide.md`
+- **For language-specific best practices** → Read `ClaudeUsage/multi_language_guide.md`
+
+**Complete Guide Index:** See `ClaudeUsage/README.md` for full documentation index
+
+<!-- /BaseProject: ClaudeUsage Guide Index -->
+
+---
+
+<!-- BaseProject: House Agents Integration -->
+## House Agents - Specialized Claude Subagents
+
+**House Agents** are specialized sub-agents that handle heavy operations in separate context windows, dramatically reducing token usage.
+
+### What Are House Agents?
+- **house-research** - Search 70k+ tokens across files, return 3k summary (95% token savings)
+- **house-git** - Analyze 43k token diffs, return 500 token summary (98% token savings)
+- **house-bash** - Process 21k+ command output, return 700 token summary (97% token savings)
+
+### When to Use House Agents
+- **house-bash**: Running commands with verbose output (test suites, builds, package installs)
+- **house-research**: Searching across 20+ files for patterns, TODOs, or function definitions
+- **house-git**: Analyzing large diffs, reviewing changes before commits, branch comparisons
+
+**Installation & Usage:** See `ClaudeUsage/house_agents.md` for detailed setup and examples
+
+**Credit:** House Agents by [@houseworthe](https://github.com/houseworthe/house-agents) (v0.2.0-beta)
+
+<!-- /BaseProject: House Agents Integration -->
 
 ---
 

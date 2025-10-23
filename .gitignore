@@ -23,6 +23,10 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Secrets and API keys (BaseProject addition)
+secrets.json
+secrets_local.json
+
 # Virtual environments
 .env
 .venv
@@ -100,7 +104,12 @@ docs/_build/
 
 # Ignore local configuration
 *.local.yaml
-secrets.json
 
 # Editor backups
 *~
+
+# Claude Code agents (BaseProject addition)
+.claude/
+
+# BaseProject integration backups
+.baseproject-backup-*/
