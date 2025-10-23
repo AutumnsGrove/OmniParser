@@ -4,15 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "omniparser"
-version = "1.0.0"
-description = "Universal document parser for multiple formats (EPUB, PDF, DOCX, HTML, Markdown, Text)"
+version = "0.1.0"
+description = "Universal document parser - Production-ready EPUB parser with plans for PDF, DOCX, HTML, and more"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
     {name = "OmniParser Contributors"}
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Text Processing",
+    "Topic :: Text Processing :: Markup",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 requires-python = ">=3.10"

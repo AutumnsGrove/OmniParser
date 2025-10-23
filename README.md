@@ -1,8 +1,19 @@
 # OmniParser - Universal Document Parser
 
-**Status:** Planning Phase Complete ✅
-**Version:** 1.0.0 (Target)
+**Status:** Phase 2.3 Complete ✅ | EPUB Parser Production-Ready
+**Version:** 0.1.0 (Development)
 **License:** MIT
+
+## Parser Implementation Status
+
+| Format | Status | Tests | Notes |
+|--------|--------|-------|-------|
+| 📖 EPUB | ✅ **Implemented** | 357 passing | Production-ready, full TOC/metadata support |
+| 📄 PDF | 📋 Planned | - | Phase 2.4 (Estimated: 2-3 weeks) |
+| 📝 DOCX | 📋 Planned | - | Phase 2.5 (Estimated: 1 week) |
+| 🌐 HTML/URL | 📋 Planned | - | Phase 2.5 (Estimated: 1-2 weeks) |
+| 📋 Markdown | 📋 Planned | - | Phase 2.6 (Estimated: 3-5 days) |
+| 📃 Text | 📋 Planned | - | Phase 2.6 (Estimated: 3-5 days) |
 
 ---
 
@@ -52,23 +63,53 @@ From books and PDFs to blog posts and tweets, from research papers to Reddit thr
 
 ### Primary Goals
 
-1. Extract epub2tts's production-tested EPUB processing into a reusable library
-2. Create unified interface for parsing **any content source** regardless of format
-3. Provide consistent data models across all parsers
-4. Enable epub2tts, RAG systems, content platforms, and other projects to consume document parsing as a service
+1. Extract epub2tts's production-tested EPUB processing into a reusable library ✅ **COMPLETE**
+2. Create unified interface for parsing **any content source** regardless of format ✅ **Architecture Complete**
+3. Provide consistent data models across all parsers ✅ **Implemented**
+4. Enable epub2tts, RAG systems, content platforms, and other projects to consume document parsing as a service 🚧 **In Progress**
 
-### Key Features
+---
 
-#### v1.0-1.2 (Core Foundation)
-- **6 Format Parsers:** EPUB, PDF, DOCX, HTML/URL, Markdown, Text
-- **Universal Output:** All parsers return same Document structure
-- **Chapter Detection:** Intelligent heading-based chapter boundaries
-- **Metadata Extraction:** Author, title, publisher, etc.
-- **Image Handling:** Extract and catalog images with position tracking
-- **Text Cleaning:** Encoding fixes, normalization, whitespace handling
-- **PyPI Ready:** Professional package for `pip install omniparser`
+## What Works Today (v0.1.0)
 
-#### Future Expansion (v1.3+)
+**Production-Ready EPUB Parser** with:
+- ✅ **TOC-based chapter detection** (with spine-based fallback)
+- ✅ **Complete metadata extraction** (Dublin Core: title, author, publisher, language, etc.)
+- ✅ **HTML to Markdown conversion** with clean text extraction
+- ✅ **Image extraction** (temporary or persistent directories, Obsidian-compatible)
+- ✅ **Text cleaning** (encoding fixes, normalization, whitespace handling)
+- ✅ **Position tracking** for content structure
+- ✅ **Word count & reading time** estimation
+- ✅ **357 comprehensive tests** (100% passing)
+- ✅ **Performance**: Parses 5MB EPUB in ~0.25 seconds (20x faster than initial target!)
+
+**Example Output:**
+```python
+from omniparser import parse_document
+
+doc = parse_document("alice-in-wonderland.epub")
+# Returns Document with 12 chapters, full metadata, 11 images
+# Processed in 0.25 seconds
+```
+
+**Real-World Testing:**
+- ✅ Validated with 5 Project Gutenberg classics (Alice, Frankenstein, Jekyll & Hyde, Moby-Dick, Pride & Prejudice)
+- ✅ Handles EPUBs from 189KB to 24MB
+- ✅ Integration tests with real-world files
+- ✅ Demo converter: EPUB → Obsidian-compatible Markdown
+
+---
+
+## Future Features
+
+### Planned Parsers (v0.2 - v1.0)
+- **PDF Parser** (Phase 2.4): PyMuPDF-based with OCR support
+- **DOCX Parser** (Phase 2.5): Microsoft Word document parsing
+- **HTML/URL Parser** (Phase 2.5): Web content extraction
+- **Markdown Parser** (Phase 2.6): Parse and normalize existing Markdown
+- **Text Parser** (Phase 2.6): Plain text with smart formatting
+
+### Future Expansion (v1.1+)
 - **Web & Social:** Twitter/X, Reddit, LinkedIn, Medium, RSS/Atom feeds
 - **Cloud Platforms:** Google Docs, Notion, Confluence, Dropbox Paper
 - **Structured Data:** JSON, XML, CSV, YAML parsing with schema detection
@@ -109,19 +150,25 @@ From books and PDFs to blog posts and tweets, from research papers to Reddit thr
 
 ---
 
-## Quick Start (Future)
+## Quick Start
 
-### Installation
+### Installation (Development)
 
-#### Standard Installation (with example EPUBs)
+**Note:** OmniParser v0.1.0 is currently in development. Install from source:
+
 ```bash
-pip install omniparser
-# or
-uv add omniparser
+# Clone repository
+git clone https://github.com/AutumnsGrove/omniparser.git
+cd omniparser
+
+# Install with UV (recommended)
+uv sync
+
+# Or with pip
+pip install -e .
 ```
 
-#### Lightweight Installation (without examples)
-If you don't need the 25MB of example EPUB files:
+**Lightweight Installation** (without 25MB of example EPUB files):
 ```bash
 # Clone without large files
 git clone --filter=blob:none --no-checkout https://github.com/AutumnsGrove/omniparser.git
@@ -129,32 +176,46 @@ cd omniparser
 git sparse-checkout init --cone
 git sparse-checkout set '/*' '!tests/fixtures/epub/*.epub'
 git checkout
-
-# Or clone normally and remove examples
-git clone https://github.com/AutumnsGrove/omniparser.git
-cd omniparser
-rm -rf tests/fixtures/epub/*.epub
-
-# Install
 uv sync
 ```
 
-### Basic Usage
+### Basic Usage (EPUB Only - v0.1.0)
+
 ```python
 from omniparser import parse_document
 
-# Parse any supported format
+# Parse EPUB files (only supported format currently)
 doc = parse_document("book.epub")
 
-# Access data
+# Access metadata
 print(f"Title: {doc.metadata.title}")
+print(f"Author: {doc.metadata.author}")
+print(f"Language: {doc.metadata.language}")
+
+# Access content
 print(f"Chapters: {len(doc.chapters)}")
 print(f"Word count: {doc.word_count}")
+print(f"Reading time: {doc.reading_time_minutes} minutes")
 
 # Iterate chapters
 for chapter in doc.chapters:
     print(f"Chapter {chapter.chapter_id}: {chapter.title}")
-    print(f"Words: {chapter.word_count}")
+    print(f"  Words: {chapter.word_count}")
+    print(f"  Start: position {chapter.start_position}")
+
+# Access images
+for image in doc.images:
+    print(f"Image: {image.filename} ({image.format})")
+```
+
+### EPUB to Markdown Conversion
+
+See the complete working example in `examples/epub_to_markdown.py`:
+
+```python
+# Converts EPUB to Obsidian-compatible Markdown
+# with YAML frontmatter, TOC, and image embedding
+python examples/epub_to_markdown.py book.epub output/
 ```
 
 ---
@@ -192,24 +253,62 @@ for chapter in doc.chapters:
 
 ## Current Status
 
-### ✅ Completed
-- [x] Project specification written
-- [x] Architecture planning complete
-- [x] Implementation strategy documented
-- [x] epub2tts migration plan created
-- [x] Risk assessment completed
-- [x] Visual diagrams created
+### ✅ Phase 1: Planning & Research (COMPLETE - Oct 16, 2025)
+- [x] Project specification (36,000 words)
+- [x] Architecture planning (40,000 words, 16-phase plan)
+- [x] Implementation reference (16,000 words)
+- [x] Architecture diagrams (37,000 words, 14 diagrams)
+- [x] epub2tts migration strategy
+- [x] Risk assessment
 
-### 🚧 In Progress
-- [ ] Phase 1: Repository setup
-- [ ] Phase 2: Core data models
-- [ ] Phase 3: Base parser interface
+### ✅ Phase 2.1: Foundation (COMPLETE - Oct 16, 2025)
+- [x] Universal data models (Document, Chapter, Metadata, ImageReference, ProcessingInfo)
+- [x] Exception hierarchy (6 custom exception classes)
+- [x] BaseParser abstract interface
+- [x] Utility modules (format_detector, encoding, validators)
+- [x] Package configuration (pyproject.toml with UV/hatchling)
+- [x] 171 comprehensive unit tests (100% passing)
 
-### 📋 Planned
-- [ ] Phases 4-16: Implementation
-- [ ] PyPI publication
+### ✅ Phase 2.2: EPUB Parser (COMPLETE - Oct 20, 2025)
+- [x] Complete EPUBParser implementation (~1,030 lines)
+- [x] TOC-based chapter detection (with spine-based fallback)
+- [x] Metadata extraction from OPF (Dublin Core fields)
+- [x] HTML to Markdown text extraction
+- [x] Image extraction with persistent/temporary directory support
+- [x] Text cleaning processor (no TTS-specific features)
+- [x] Main parse_document() API integration
+- [x] 342 tests passing (141 new EPUB tests)
+- [x] All code Black formatted and type-hinted
+
+### ✅ Phase 2.3: Integration Testing (COMPLETE - Oct 20, 2025)
+- [x] 5 Project Gutenberg EPUBs added (26MB test fixtures)
+- [x] 15 integration tests with real EPUB files (221 lines)
+- [x] EPUB to Markdown demo application (213 lines)
+- [x] Persistent image extraction feature added
+- [x] Obsidian-compatible markdown output
+- [x] Performance validated: 0.25s for 5MB EPUB (20x faster than 5s target!)
+- [x] **357 total tests passing (100% success rate)**
+
+### 📋 Next Steps
+
+**Option A: Phase 3 - Package Release** (Recommended)
+- [ ] Update documentation for v0.1.0
+- [ ] Set up CI/CD pipeline
+- [ ] Publish to PyPI as EPUB-focused parser
+- [ ] Create demo repository
+- [ ] User onboarding guide
+
+**Option B: Phase 2.4 - PDF Parser** (Add second format first)
+- [ ] Implement PDFParser with PyMuPDF
+- [ ] Add OCR support for scanned PDFs
+- [ ] Heading-based chapter detection
+- [ ] Comprehensive PDF testing
+- [ ] Estimated: 2-3 weeks
+
+**Future Phases:**
+- [ ] Additional parsers (DOCX, HTML, Markdown, Text)
 - [ ] epub2tts integration
-- [ ] v1.1+ features
+- [ ] Advanced features (NLP chapter detection, semantic analysis)
 
 ---
 
@@ -278,21 +377,28 @@ class BaseParser(ABC):
 
 ## Dependencies
 
-### Core
-- pyyaml>=6.0
-- beautifulsoup4>=4.12.0
-- lxml>=5.0.0
-- ftfy>=6.1.0
-- python-magic>=0.4.27
+### Currently Active (v0.1.0 - EPUB Parser)
+- **Core Processing:**
+  - pyyaml>=6.0 - Configuration and data serialization
+  - beautifulsoup4>=4.12.0 - HTML parsing
+  - lxml>=5.0.0 - XML/HTML processing
+  - ftfy>=6.1.0 - Text encoding fixes
+  - python-magic>=0.4.27 - Format detection
 
-### Parser-Specific
-- ebooklib>=0.19 (EPUB)
-- PyMuPDF>=1.23.0 (PDF)
-- pytesseract>=0.3.10 (PDF OCR)
-- python-docx>=1.0.0 (DOCX)
-- trafilatura>=1.6.0 (HTML)
-- chardet>=5.2.0 (Text)
-- Pillow>=10.0.0 (Images)
+- **EPUB Parser:**
+  - ebooklib>=0.18 - EPUB file handling
+  - Pillow>=10.0.0 - Image extraction
+  - chardet>=5.2.0 - Character encoding detection
+  - regex>=2023.0.0 - Pattern matching
+
+### Installed but Not Yet Used (Future Parsers)
+- **PDF (Phase 2.4):** PyMuPDF>=1.23.0, pytesseract>=0.3.10
+- **DOCX (Phase 2.5):** python-docx>=1.0.0
+- **HTML/URL (Phase 2.5):** trafilatura>=1.6.0, readability-lxml>=0.8.0, requests>=2.31.0
+
+### Development
+- pytest>=8.4.2, pytest-cov>=7.0.0
+- black>=25.9.0, mypy>=1.18.2
 
 ---
 
@@ -346,17 +452,28 @@ tests/
 
 ## Success Metrics
 
-### Package Quality
-- [ ] All 6 parsers implemented
-- [ ] >80% test coverage
-- [ ] Package builds: `uv build`
-- [ ] Can install: `uv add omniparser`
-- [ ] Examples run successfully
+### v0.1.0 - EPUB Parser (Current)
+- [x] EPUB parser fully implemented and tested
+- [x] >90% test coverage for EPUB components (357 tests passing)
+- [x] Package builds successfully: `uv build`
+- [x] Can install from source: `uv sync` or `pip install -e .`
+- [x] Examples run successfully (epub_to_markdown.py)
+- [x] Performance exceeds targets (0.25s vs 5s goal)
+- [x] Real-world validation (5 Project Gutenberg EPUBs)
+- [ ] PyPI publication (pending Phase 3)
 
-### epub2tts Integration
-- [ ] epub2tts uses OmniParser
+### v1.0.0 - Multi-Format Parser (Future Target)
+- [ ] 3+ parsers implemented (EPUB ✅, PDF, DOCX minimum)
+- [ ] >80% overall test coverage
+- [ ] >500 total tests
+- [ ] Published to PyPI: `pip install omniparser`
+- [ ] CI/CD pipeline operational
+- [ ] Complete API documentation
+
+### epub2tts Integration (Phase 4)
+- [ ] epub2tts uses OmniParser dependency
 - [ ] All epub2tts tests pass
-- [ ] Audio generation works
+- [ ] Audio generation works with OmniParser
 - [ ] No performance regression >20%
 
 ---
@@ -397,6 +514,7 @@ MIT License - See LICENSE file for details
 
 ---
 
-**Status:** Planning Phase Complete ✅
-**Next Action:** Begin Phase 1 (Repository Setup)
-**Last Updated:** October 16, 2025
+**Status:** Phase 2.3 Complete ✅ | EPUB Parser Production-Ready
+**Version:** v0.1.0 (Development)
+**Next Action:** Choose Phase 3 (PyPI Release) or Phase 2.4 (PDF Parser)
+**Last Updated:** October 23, 2025
