@@ -214,6 +214,23 @@ uv build
 - **Docstrings:** Google style
 - **Import order:** stdlib, third-party, local
 
+### Functional Patterns (For New Code)
+
+**IMPORTANT:** When writing NEW code (PDF parser, DOCX parser, new features), follow the patterns in:
+- **`FUNCTIONAL_PATTERNS.md`** - Comprehensive guide with examples
+- **`PATTERNS_QUICK_REF.md`** - Quick reference card (keep open while coding!)
+
+**Key Guidelines for New Code:**
+- Functions: 15-30 lines (max 50)
+- Files: 50-200 lines per file
+- Use comprehensions over loops
+- Extract repeated code (>5 lines) into utilities
+- Break complex logic into small, named helper functions
+- Type hints on all functions
+- Organize by feature (not by layer)
+
+**Note:** These patterns apply to NEW code only. Don't refactor existing code (like EPUB parser) yet - we'll do that later once we have multiple parsers using these patterns successfully.
+
 ### Code Quality Rules
 1. **Use type hints everywhere**
    ```python
