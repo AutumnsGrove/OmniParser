@@ -15,7 +15,7 @@ import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import ebooklib
 from ebooklib import epub
@@ -104,7 +104,7 @@ class EPUBParser(BaseParser):
         self._warnings: List[str] = []
         self._start_time: Optional[float] = None
 
-    def supports_format(self, file_path: Path) -> bool:
+    def supports_format(self, file_path: Union[Path, str]) -> bool:
         """Check if file is an EPUB.
 
         Args:
@@ -113,9 +113,11 @@ class EPUBParser(BaseParser):
         Returns:
             True if file has .epub extension, False otherwise.
         """
+        if isinstance(file_path, str):
+            file_path = Path(file_path)
         return file_path.suffix.lower() in [".epub"]
 
-    def parse(self, file_path: Path) -> Document:
+    def parse(self, file_path: Union[Path, str]) -> Document:
         """Parse EPUB file and return Document object.
 
         This is the main entry point for EPUB parsing. It orchestrates:
@@ -140,6 +142,10 @@ class EPUBParser(BaseParser):
             ValidationError: If file validation fails.
         """
         import time
+
+        # Convert string to Path if needed
+        if isinstance(file_path, str):
+            file_path = Path(file_path)
 
         self._start_time = time.time()
         self._warnings = []
@@ -866,7 +872,7 @@ class EPUBParser(BaseParser):
 
         return filtered_chapters
 
-    def extract_images(self, file_path: Path) -> List[ImageReference]:
+    def extract_images(self, file_path: Union[Path, str]) -> List[ImageReference]:
         """Extract images from EPUB file.
 
         Extracts all images from the EPUB and saves them to either a temporary
@@ -889,6 +895,10 @@ class EPUBParser(BaseParser):
             - Alt text set to None (HTML parsing not implemented)
             - Preserves EPUB internal directory structure (e.g., images/cover.jpg)
         """
+        # Convert string to Path if needed
+        if isinstance(file_path, str):
+            file_path = Path(file_path)
+
         try:
             # Load EPUB file
             logger.info(f"Loading EPUB for image extraction: {file_path}")

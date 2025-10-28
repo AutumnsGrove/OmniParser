@@ -30,6 +30,7 @@ from .exceptions import (
 
 # Parsers (for advanced usage - users can instantiate directly if needed)
 from .parsers.epub_parser import EPUBParser
+from .parsers.html_parser import HTMLParser
 
 # Version
 __version__ = "1.0.0"
@@ -55,6 +56,7 @@ __all__ = [
     "ValidationError",
     # Parsers
     "EPUBParser",
+    "HTMLParser",
     # Version
     "__version__",
 ]
