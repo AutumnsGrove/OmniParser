@@ -68,6 +68,14 @@
 - [ ] Structured Data: JSON, XML, CSV, YAML parsing
 - [ ] Archives: ZIP/TAR support with batch processing
 - [ ] Technical: Jupyter notebooks, code documentation, API specs
+- [ ] LLM-powered enhancements:
+  - [ ] Image analysis → text descriptions (for PDFs, EPUBs)
+  - [ ] Smart content summarization
+  - [ ] Semantic chapter detection
+- [ ] Export format options:
+  - [ ] Plain text (.txt) export
+  - [ ] PDF export from markdown
+  - [ ] HTML export with styling
 
 ### epub2tts Integration (Phase 4)
 - [ ] Make OmniParser a dependency in epub2tts
@@ -89,8 +97,8 @@
 
 ### Development Resources
 - **Workflow Guides:** See `ClaudeUsage/` directory for comprehensive development workflows
-- **Architecture:** See `ARCHITECTURE_PLAN.md` for complete implementation plan
-- **Specification:** See `OMNIPARSER_PROJECT_SPEC.md` for technical details
+- **Architecture:** See `docs/ARCHITECTURE_PLAN.md` for complete implementation plan
+- **Specification:** See `docs/OMNIPARSER_PROJECT_SPEC.md` for technical details
 - **Git Workflow:** See `ClaudeUsage/git_workflow.md` for branch strategy recommendations
 
 ### Key Commands

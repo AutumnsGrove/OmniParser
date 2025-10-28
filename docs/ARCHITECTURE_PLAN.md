@@ -698,7 +698,7 @@ class ValidationError(OmniparserError):
 
 ### Phase 6: EPUB Parser (Port from epub2tts) (8 hours)
 
-**Source:** `/Users/autumn/Documents/Projects/epub2tts/src/core/ebooklib_processor.py`
+**Source:** epub2tts `src/core/ebooklib_processor.py`
 
 **Task:** Create `src/omniparser/parsers/epub_parser.py`
 

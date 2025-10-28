@@ -6,11 +6,12 @@
 
 ## Quick Links
 
-- **Main Spec:** `/Users/autumn/Documents/Projects/OmniParser/OMNIPARSER_PROJECT_SPEC.md`
-- **Metaprompt:** `/Users/autumn/Documents/Projects/epub2tts/METAPROMPT_1_OMNIPARSER_EXTRACTION.md`
-- **Source EPUB Code:** `/Users/autumn/Documents/Projects/epub2tts/src/core/ebooklib_processor.py`
-- **Source TextCleaner:** `/Users/autumn/Documents/Projects/epub2tts/src/core/text_cleaner.py`
-- **epub2tts Tests:** `/Users/autumn/Documents/Projects/epub2tts/tests/`
+- **Main Spec:** `OMNIPARSER_PROJECT_SPEC.md` (same directory)
+- **epub2tts Source:** Original EPUB processing implementation
+  - `METAPROMPT_1_OMNIPARSER_EXTRACTION.md`
+  - `src/core/ebooklib_processor.py`
+  - `src/core/text_cleaner.py`
+  - `tests/`
 
 ---
 
@@ -371,8 +372,7 @@ chardet>=5.2.0
 
 ### Development Commands
 ```bash
-# Setup
-cd /Users/autumn/Documents/Projects/OmniParser
+# Setup (from project root)
 uv init
 uv sync
 

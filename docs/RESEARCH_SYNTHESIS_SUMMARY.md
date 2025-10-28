@@ -556,17 +556,18 @@ This research synthesis provides:
 ## Document Index
 
 **Primary Documents Created:**
-1. `/Users/autumn/Documents/Projects/OmniParser/ARCHITECTURE_PLAN.md` - Main blueprint
-2. `/Users/autumn/Documents/Projects/OmniParser/IMPLEMENTATION_REFERENCE.md` - Quick reference
-3. `/Users/autumn/Documents/Projects/OmniParser/ARCHITECTURE_DIAGRAMS.md` - Visual reference
-4. `/Users/autumn/Documents/Projects/OmniParser/RESEARCH_SYNTHESIS_SUMMARY.md` - This document
+1. `ARCHITECTURE_PLAN.md` - Main blueprint (same directory)
+2. `IMPLEMENTATION_REFERENCE.md` - Quick reference (same directory)
+3. `ARCHITECTURE_DIAGRAMS.md` - Visual reference (same directory)
+4. `RESEARCH_SYNTHESIS_SUMMARY.md` - This document
 
 **Source Documents Analyzed:**
-1. `/Users/autumn/Documents/Projects/epub2tts/METAPROMPT_1_OMNIPARSER_EXTRACTION.md`
-2. `/Users/autumn/Documents/Projects/OmniParser/OMNIPARSER_PROJECT_SPEC.md`
-3. `/Users/autumn/Documents/Projects/epub2tts/src/core/ebooklib_processor.py`
-4. `/Users/autumn/Documents/Projects/epub2tts/src/core/text_cleaner.py`
-5. `/Users/autumn/Documents/Projects/epub2tts/pyproject.toml`
+1. `OMNIPARSER_PROJECT_SPEC.md` (same directory)
+2. **epub2tts:** Original EPUB processing implementation
+   - `METAPROMPT_1_OMNIPARSER_EXTRACTION.md`
+   - `src/core/ebooklib_processor.py`
+   - `src/core/text_cleaner.py`
+   - `pyproject.toml`
 
 ---
 

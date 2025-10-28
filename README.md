@@ -4,6 +4,14 @@
 **Version:** 0.1.0 (Development)
 **License:** MIT
 
+---
+
+> **Any file format → clean markdown.**
+>
+> OmniParser is a universal document parser that transforms documents, web pages, and structured data into standardized markdown with comprehensive metadata. Connect it to your pipelines, tools, or workflows—anywhere you need intelligent document ingestion.
+
+---
+
 ## Parser Implementation Status
 
 | Format | Status | Tests | Notes |
@@ -21,31 +29,31 @@
 
 ### 📋 Planning Documents (Start Here)
 
-1. **[RESEARCH_SYNTHESIS_SUMMARY.md](RESEARCH_SYNTHESIS_SUMMARY.md)** - Executive summary of architecture planning
+1. **[RESEARCH_SYNTHESIS_SUMMARY.md](docs/RESEARCH_SYNTHESIS_SUMMARY.md)** - Executive summary of architecture planning
    - 16,000 words | Read time: 20 minutes
    - Overview of all design decisions and implementation strategy
 
-2. **[ARCHITECTURE_PLAN.md](ARCHITECTURE_PLAN.md)** - Complete implementation blueprint
+2. **[ARCHITECTURE_PLAN.md](docs/ARCHITECTURE_PLAN.md)** - Complete implementation blueprint
    - 40,000 words | Read time: 60 minutes
    - Phase-by-phase implementation guide (16 phases)
    - epub2tts migration strategy
    - Risk assessment
 
-3. **[IMPLEMENTATION_REFERENCE.md](IMPLEMENTATION_REFERENCE.md)** - Developer quick reference
+3. **[IMPLEMENTATION_REFERENCE.md](docs/IMPLEMENTATION_REFERENCE.md)** - Developer quick reference
    - 16,000 words | Read time: 20 minutes
    - API contracts
    - Code patterns
    - Command reference
    - Troubleshooting guide
 
-4. **[ARCHITECTURE_DIAGRAMS.md](ARCHITECTURE_DIAGRAMS.md)** - Visual architecture reference
+4. **[ARCHITECTURE_DIAGRAMS.md](docs/ARCHITECTURE_DIAGRAMS.md)** - Visual architecture reference
    - 37,000 words | Read time: 30 minutes
    - System diagrams
    - Data flow diagrams
    - Component structure
    - Package layout
 
-5. **[OMNIPARSER_PROJECT_SPEC.md](OMNIPARSER_PROJECT_SPEC.md)** - Original project specification
+5. **[OMNIPARSER_PROJECT_SPEC.md](docs/OMNIPARSER_PROJECT_SPEC.md)** - Original project specification
    - 36,000 words | Read time: 45 minutes
    - Complete technical specification
    - API reference
@@ -117,7 +125,7 @@ doc = parse_document("alice-in-wonderland.epub")
 - **Technical:** Jupyter notebooks, code documentation, API specs
 - **AI-Powered:** Semantic analysis, auto-tagging, summarization (v2.0+)
 
-**📖 See [Diagrams/comprehensive-workflow.md](Diagrams/comprehensive-workflow.md) for the complete vision**
+**📖 See [Diagrams/comprehensive-workflow.md](docs/Diagrams/comprehensive-workflow.md) for the complete vision**
 
 ---
 
@@ -315,14 +323,14 @@ python examples/epub_to_markdown.py book.epub output/
 ## Documentation Index
 
 ### Planning Documents
-- **RESEARCH_SYNTHESIS_SUMMARY.md** - High-level overview
-- **ARCHITECTURE_PLAN.md** - Detailed implementation plan
-- **IMPLEMENTATION_REFERENCE.md** - Developer quick reference
-- **ARCHITECTURE_DIAGRAMS.md** - Visual architecture
-- **OMNIPARSER_PROJECT_SPEC.md** - Technical specification
+- **[docs/RESEARCH_SYNTHESIS_SUMMARY.md](docs/RESEARCH_SYNTHESIS_SUMMARY.md)** - High-level overview
+- **[docs/ARCHITECTURE_PLAN.md](docs/ARCHITECTURE_PLAN.md)** - Detailed implementation plan
+- **[docs/IMPLEMENTATION_REFERENCE.md](docs/IMPLEMENTATION_REFERENCE.md)** - Developer quick reference
+- **[docs/ARCHITECTURE_DIAGRAMS.md](docs/ARCHITECTURE_DIAGRAMS.md)** - Visual architecture
+- **[docs/OMNIPARSER_PROJECT_SPEC.md](docs/OMNIPARSER_PROJECT_SPEC.md)** - Technical specification
 
 ### Visual Workflows
-- **[Diagrams/comprehensive-workflow.md](Diagrams/comprehensive-workflow.md)** - 🆕 **Comprehensive workflow vision**
+- **[docs/Diagrams/comprehensive-workflow.md](docs/Diagrams/comprehensive-workflow.md)** - 🆕 **Comprehensive workflow vision**
   - Universal content ingestion platform
   - 20+ input sources (documents, web, social, feeds, cloud, code)
   - Complete parser routing and processing pipeline
@@ -331,9 +339,10 @@ python examples/epub_to_markdown.py book.epub output/
   - **Start here to see the full scope of OmniParser's potential**
 
 ### Source Materials (Reference)
-- `/Users/autumn/Documents/Projects/epub2tts/METAPROMPT_1_OMNIPARSER_EXTRACTION.md`
-- `/Users/autumn/Documents/Projects/epub2tts/src/core/ebooklib_processor.py` (963 lines)
-- `/Users/autumn/Documents/Projects/epub2tts/src/core/text_cleaner.py` (522 lines)
+- **epub2tts:** Original EPUB processing implementation
+  - `METAPROMPT_1_OMNIPARSER_EXTRACTION.md`
+  - `src/core/ebooklib_processor.py` (963 lines)
+  - `src/core/text_cleaner.py` (522 lines)
 
 ---
 

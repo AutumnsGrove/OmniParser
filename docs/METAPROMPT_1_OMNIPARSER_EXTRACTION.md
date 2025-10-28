@@ -228,7 +228,7 @@ class BaseParser(ABC):
 
 **Task:** Port EPUB processing logic to `src/omniparser/parsers/epub_parser.py`
 
-**Source File:** `/Users/autumn/Documents/Projects/epub2tts/src/core/ebooklib_processor.py`
+**Source:** epub2tts `src/core/ebooklib_processor.py`
 
 **Implementation Steps:**
 1. Read the existing ebooklib_processor.py carefully

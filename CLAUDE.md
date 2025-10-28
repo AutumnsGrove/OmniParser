@@ -25,10 +25,10 @@ This file provides guidance to Claude Code when working with code in this reposi
 - Comprehensive test suite (357 tests, 100% passing)
 
 **Key Resources:**
-- Full specification: `OMNIPARSER_PROJECT_SPEC.md` (36,000 words)
-- Architecture plan: `ARCHITECTURE_PLAN.md` (40,000 words, 16 phases)
-- Implementation reference: `IMPLEMENTATION_REFERENCE.md` (16,000 words)
-- Visual diagrams: `ARCHITECTURE_DIAGRAMS.md` (37,000 words)
+- Full specification: `docs/OMNIPARSER_PROJECT_SPEC.md` (36,000 words)
+- Architecture plan: `docs/ARCHITECTURE_PLAN.md` (40,000 words, 16 phases)
+- Implementation reference: `docs/IMPLEMENTATION_REFERENCE.md` (16,000 words)
+- Visual diagrams: `docs/ARCHITECTURE_DIAGRAMS.md` (37,000 words)
 
 <!-- /BaseProject: Project Overview -->
 
@@ -397,8 +397,8 @@ This allows easy navigation in IDEs.
 
 ### Project Setup
 ```bash
-# Initialize project
-cd /Users/autumn/Documents/Projects/OmniParser
+# Navigate to project root
+cd omniparser
 uv init
 
 # Install dependencies
