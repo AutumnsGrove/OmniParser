@@ -3,7 +3,7 @@
 **Keep this open while coding!** 👀
 
 ## The Golden Rules
-1. **Functions:** 15-30 lines (max 50)
+1. **Functions:** 15-30 lines (max 100)
 2. **Files:** 50-200 lines per file
 3. **No repetition:** Extract if used twice
 4. **Comprehensions** > loops
@@ -14,7 +14,7 @@
 ## Quick Checklist ✓
 
 Before committing:
-- [ ] No function >50 lines
+- [ ] No function >100 lines
 - [ ] No file >200 lines
 - [ ] No repeated code blocks
 - [ ] All public functions have docstrings

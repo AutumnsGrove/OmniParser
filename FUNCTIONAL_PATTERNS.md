@@ -9,7 +9,7 @@
 ## Quick Reference
 
 When writing new code, aim for:
-- ✅ Functions: 10-50 lines (sweet spot: 15-30)
+- ✅ Functions: 10-80 lines (sweet spot: 15-45)
 - ✅ Files: 50-200 lines per file
 - ✅ Use comprehensions over loops
 - ✅ Break complex logic into named helper functions

@@ -35,28 +35,6 @@
 
 ---
 
-## BaseProject Integration Follow-up
-
-### Completed
-- [x] Clone BaseProject template
-- [x] Copy ClaudeUsage/ workflow guides to project
-- [x] Merge CLAUDE.md with BaseProject sections
-- [x] Enhance .gitignore with BaseProject patterns
-- [x] Analyze commit style (95% already following conventional commits!)
-
-### Optional Enhancements
-- [ ] Install house-agents for context-efficient research (see ClaudeUsage/house_agents.md)
-  - Install project-level: `git clone https://github.com/houseworthe/house-agents.git /tmp/house-agents && cp -r /tmp/house-agents/.claude .`
-  - Or user-wide: `mkdir -p ~/.claude/agents && cp /tmp/house-agents/.claude/agents/*.md ~/.claude/agents/`
-- [ ] Set up pre-commit hooks from ClaudeUsage/pre_commit_hooks/ (optional)
-  - Commit message validation
-  - Secrets detection
-  - Code formatting checks
-- [ ] Create secrets_template.json if API keys are needed
-- [ ] Review ClaudeUsage/ guides for relevant workflows
-
----
-
 ## Code Quality & Maintenance
 
 ### Testing
