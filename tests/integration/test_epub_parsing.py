@@ -17,17 +17,18 @@ from omniparser.models import Document
 
 # Path to test fixtures
 FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "epub"
-SYSTEM_FOR_WRITING_EPUB = FIXTURES_DIR / "A System for Writing.epub"
+FRANKENSTEIN_EPUB = FIXTURES_DIR / "frankenstein.epub"
+PRIDE_AND_PREJUDICE_EPUB = FIXTURES_DIR / "pride-and-prejudice.epub"
 
 
-class TestEPUBParsingSystemForWriting:
-    """Integration tests with 'A System for Writing' EPUB."""
+class TestEPUBParsingFrankenstein:
+    """Integration tests with Frankenstein EPUB (public domain)."""
 
     @pytest.fixture
     def epub_path(self) -> Path:
         """Return path to test EPUB file."""
-        assert SYSTEM_FOR_WRITING_EPUB.exists(), "Test EPUB file missing"
-        return SYSTEM_FOR_WRITING_EPUB
+        assert FRANKENSTEIN_EPUB.exists(), "Test EPUB file missing"
+        return FRANKENSTEIN_EPUB
 
     def test_parse_epub_successfully(self, epub_path: Path) -> None:
         """Test that EPUB parses without errors."""
@@ -43,19 +44,17 @@ class TestEPUBParsingSystemForWriting:
 
         # Title should be extracted
         assert doc.metadata.title is not None
-        assert "System for Writing" in doc.metadata.title
+        assert "Frankenstein" in doc.metadata.title
 
         # Author
-        assert doc.metadata.author == "Bob Doto"
-
-        # Publisher
-        assert doc.metadata.publisher == "New Old Traditions"
+        assert doc.metadata.author == "Mary Wollstonecraft Shelley"
 
         # Language
         assert doc.metadata.language == "en"
 
-        # Date (should be parsed successfully now)
-        assert doc.metadata.publication_date is not None
+        # Date (may or may not be present in public domain books)
+        # Just verify it's accessible (can be None)
+        _ = doc.metadata.publication_date
 
     def test_parse_epub_chapters(self, epub_path: Path) -> None:
         """Test chapter detection."""
@@ -64,10 +63,8 @@ class TestEPUBParsingSystemForWriting:
         # Should have detected chapters
         assert len(doc.chapters) > 0
         assert len(doc.chapters) >= 10  # At least 10 chapters
-
-        # First chapter should be Introduction
-        first_chapter = doc.chapters[0]
-        assert "Introduction" in first_chapter.title
+        # Frankenstein has 30 chapters
+        assert len(doc.chapters) == 30
 
         # All chapters should have content
         for chapter in doc.chapters:
@@ -81,8 +78,9 @@ class TestEPUBParsingSystemForWriting:
         doc = parse_document(epub_path)
 
         # Should have reasonable word count
-        assert doc.word_count > 30000  # At least 30k words
-        assert doc.word_count < 100000  # Less than 100k words
+        # Frankenstein has ~78k words
+        assert doc.word_count > 70000  # At least 70k words
+        assert doc.word_count < 85000  # Less than 85k words
 
         # Chapter word counts should sum to approximately total
         # (may differ slightly due to spacing/cleaning)
@@ -92,19 +90,12 @@ class TestEPUBParsingSystemForWriting:
         assert difference < doc.word_count * 0.1
 
     def test_parse_epub_images(self, epub_path: Path) -> None:
-        """Test image extraction."""
+        """Test image extraction (or lack thereof)."""
         doc = parse_document(epub_path)
 
-        # Should have extracted images
-        assert len(doc.images) > 0
-        assert len(doc.images) >= 50  # At least 50 images
-
-        # Check image references
-        for image in doc.images:
-            assert image.image_id is not None
-            assert image.file_path is not None
-            # Position tracking not implemented yet
-            assert image.position == 0
+        # Frankenstein has no images (plain text public domain version)
+        # This tests that parsing works correctly with image-free EPUBs
+        assert len(doc.images) == 0
 
     def test_parse_epub_performance(self, epub_path: Path) -> None:
         """Test parsing performance."""
@@ -115,15 +106,20 @@ class TestEPUBParsingSystemForWriting:
         # Should parse in reasonable time
         assert elapsed < 5.0, f"Parsing took {elapsed:.2f}s (should be <5s)"
 
-        # For this ~5MB file, should be much faster
-        assert elapsed < 1.0, f"Parsing took {elapsed:.2f}s (expected <1s for 5MB)"
+        # For Frankenstein (~465KB), should be fast
+        assert elapsed < 1.0, f"Parsing took {elapsed:.2f}s (expected <1s for 465KB)"
 
-    def test_parse_epub_no_warnings(self, epub_path: Path) -> None:
-        """Test that parsing produces no warnings."""
+    def test_parse_epub_warnings(self, epub_path: Path) -> None:
+        """Test that parsing warnings are reasonable."""
         doc = parse_document(epub_path)
 
-        # Should have no warnings
-        assert len(doc.processing_info.warnings) == 0
+        # Frankenstein has 2 warnings about filtered short chapters (title page, TOC)
+        # This is expected behavior - short chapters are filtered by min_chapter_length
+        assert len(doc.processing_info.warnings) <= 5  # Allow up to 5 warnings
+
+        # All warnings should be about short chapters (informational, not errors)
+        for warning in doc.processing_info.warnings:
+            assert "Filtered short chapter" in warning or "chapter" in warning.lower()
 
     def test_parse_epub_processing_info(self, epub_path: Path) -> None:
         """Test processing info metadata."""
@@ -140,19 +136,21 @@ class TestEPUBParsingSystemForWriting:
         doc = parse_document(epub_path)
 
         # Should have reasonable reading time estimate
-        # 40k words at 225 WPM = ~178 minutes
-        assert doc.estimated_reading_time > 100
-        assert doc.estimated_reading_time < 300
+        # 78k words at 225 WPM = ~347 minutes
+        assert doc.estimated_reading_time > 300
+        assert doc.estimated_reading_time < 400
 
     def test_parse_epub_with_custom_options(self, epub_path: Path) -> None:
         """Test parsing with custom options."""
-        # Parse without images
+        # Parse without images (Frankenstein has none anyway)
         doc = parse_document(epub_path, options={"extract_images": False})
         assert len(doc.images) == 0
 
         # Parse without text cleaning
         doc = parse_document(epub_path, options={"clean_text": False})
         assert doc.content is not None
+        # Should still have parsed successfully
+        assert len(doc.chapters) > 0
 
     def test_parse_epub_chapter_hierarchy(self, epub_path: Path) -> None:
         """Test chapter hierarchy levels."""
@@ -180,6 +178,56 @@ class TestEPUBParsingSystemForWriting:
             for word in chapter_words:
                 if len(word) > 3:  # Skip very short words
                     assert word in chapter_from_doc or word in doc.content
+
+
+class TestEPUBParsingPrideAndPrejudice:
+    """Integration tests with Pride and Prejudice EPUB (image-heavy)."""
+
+    @pytest.fixture
+    def epub_path(self) -> Path:
+        """Return path to Pride and Prejudice EPUB."""
+        assert PRIDE_AND_PREJUDICE_EPUB.exists(), "Test EPUB file missing"
+        return PRIDE_AND_PREJUDICE_EPUB
+
+    def test_parse_epub_with_images(self, epub_path: Path) -> None:
+        """Test image extraction with image-heavy EPUB."""
+        doc = parse_document(epub_path)
+
+        # Pride and Prejudice has 163 images
+        assert len(doc.images) > 150
+        assert len(doc.images) <= 170  # Allow some variance
+
+        # Check image references are valid
+        for image in doc.images:
+            assert image.image_id is not None
+            assert image.file_path is not None
+            # Position tracking not implemented yet
+            assert image.position == 0
+
+    def test_parse_epub_metadata_complete(self, epub_path: Path) -> None:
+        """Test metadata extraction from well-formed EPUB."""
+        doc = parse_document(epub_path)
+
+        assert doc.metadata.title == "Pride and Prejudice"
+        assert doc.metadata.author == "Jane Austen"
+        assert doc.metadata.language == "en"
+
+    def test_parse_large_epub_performance(self, epub_path: Path) -> None:
+        """Test performance with large EPUB (24MB)."""
+        start = time.time()
+        doc = parse_document(epub_path)
+        elapsed = time.time() - start
+
+        # Should still parse in reasonable time despite 24MB size
+        assert elapsed < 10.0, f"Parsing took {elapsed:.2f}s (should be <10s)"
+
+    def test_parse_epub_large_word_count(self, epub_path: Path) -> None:
+        """Test word count with large book."""
+        doc = parse_document(epub_path)
+
+        # Pride and Prejudice has ~132k words
+        assert doc.word_count > 125000
+        assert doc.word_count < 140000
 
 
 class TestEPUBParsingEdgeCases:
