@@ -93,12 +93,12 @@ tests/fixtures/**/*.epub
 tests/fixtures/**/*.pdf
 tests/fixtures/**/*.docx
 
-# Block test images (user adds their own)
-tests/fixtures/images/**/*.png
-tests/fixtures/images/**/*.jpg
-tests/fixtures/images/**/*.jpeg
-tests/fixtures/images/**/*.gif
-tests/fixtures/images/**/*.webp
+# Allow test images (will be moved to dev branch later)
+# tests/fixtures/images/**/*.png
+# tests/fixtures/images/**/*.jpg
+# tests/fixtures/images/**/*.jpeg
+# tests/fixtures/images/**/*.gif
+# tests/fixtures/images/**/*.webp
 
 # Allow only the 5 public domain examples from Project Gutenberg
 !tests/fixtures/epub/alice-in-wonderland.epub
