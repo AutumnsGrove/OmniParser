@@ -81,9 +81,9 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "--strict-markers --strict-config --verbose --cov=omniparser"
+addopts = "--strict-markers --strict-config --verbose --cov=omniparser -m 'not integration'"
 markers = [
-    "integration: marks tests as integration tests requiring real API calls (deselect with '-m \"not integration\"')",
+    "integration: marks tests as integration tests requiring real API calls (run with: pytest -m integration)",
 ]
 
 [tool.mypy]

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- AI-powered document processors (tagging, summarization, quality scoring)
+- AI-powered image analysis pipeline (OCR, description, classification)
+- Multi-provider AI support (Anthropic, OpenAI, OpenRouter, Ollama, LM Studio)
+- Optional [ai] dependency group for AI features
 - Add automated changelog generation with git-cliff
 - Add release-please for automated version management
 - **ai**: Add AI configuration module with multi-provider support
@@ -55,57 +59,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Update CHANGELOG.md
 - Add troubleshooting for changelog content loss and tag requirements
-- Update CHANGELOG.md
-- Update CHANGELOG.md
 - Add comprehensive agent prompts for parallel parser development
-
-### Miscellaneous Tasks
-
-- Move files and updated cliff.toml file
-
-## [Unreleased]
-
-### Added
-
-- Add automated changelog generation with git-cliff
-- Add release-please for automated version management
-
-### Fixed
-
-- Update changelog workflow to use git-cliff-action v4
-- Configure git-cliff to use prepend mode instead of regenerating changelog
-- Remove conflicting OUTPUT env variable from git-cliff workflow
-
-### Documentation
-
-- Update CHANGELOG.md
-- Add troubleshooting for changelog content loss and tag requirements
-- Update CHANGELOG.md
-
-### Miscellaneous Tasks
-
-- Move files and updated cliff.toml file
-
-## [Unreleased]
-
-### Added
-
-- Add automated changelog generation with git-cliff
-
-### Fixed
-
-- Update changelog workflow to use git-cliff-action v4
-- Configure git-cliff to use prepend mode instead of regenerating changelog
-- Remove conflicting OUTPUT env variable from git-cliff workflow
-
-### Documentation
-
-- Update CHANGELOG.md
-- Add troubleshooting for changelog content loss and tag requirements
-
-### Miscellaneous Tasks
-
-- Move files and updated cliff.toml file
+- Add API documentation for AI features
 
 ## [0.1.0] - 2025-10-23
 
