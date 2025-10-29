@@ -8,12 +8,14 @@ table conversion, and text cleaning.
 
 Features:
 - Style-based heading detection (Heading 1 through Heading 6)
-- Formatting preservation (bold, italic, underline)
-- List conversion (bullets and numbered)
-- Link extraction and conversion
+- Formatting preservation (bold, italic)
 - Image extraction with metadata
 - Table extraction and markdown conversion
 - Metadata from document properties
+
+Not Yet Implemented:
+- List conversion (bullets and numbered lists) - TODO
+- Hyperlink extraction and conversion - TODO
 """
 
 import io
@@ -23,10 +25,9 @@ import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 from docx import Document as DocxDocument  # type: ignore[import]
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml.table import CT_Tbl
 from docx.oxml.text.paragraph import CT_P
 from docx.table import Table
@@ -47,18 +48,20 @@ class DOCXParser(BaseParser):
 
     Features:
     - Style-based heading detection (Heading 1 through Heading 6)
-    - Formatting preservation (bold, italic, underline)
-    - List conversion (bullets and numbered)
-    - Link extraction and conversion
+    - Formatting preservation (bold, italic)
     - Image extraction with metadata
     - Table extraction and markdown conversion
     - Metadata from document properties
 
+    Not Yet Implemented (TODO for future versions):
+    - List conversion (bullets and numbered lists)
+    - Hyperlink extraction and conversion
+
     Options:
         extract_images (bool): Extract embedded images. Default: True
-        image_output_dir (str|Path): Directory for images. If None (default),
-            images are saved to temp directory and deleted after parsing.
-        preserve_formatting (bool): Preserve bold/italic/etc. Default: True
+        image_output_dir (str|Path): Directory for images. REQUIRED for image
+            extraction - if None (default), images will NOT be extracted.
+        preserve_formatting (bool): Preserve bold/italic formatting. Default: True
         extract_tables (bool): Extract and convert tables. Default: True
         clean_text (bool): Apply text cleaning. Default: True
         heading_styles (List[str]): Style names to treat as headings.
@@ -66,7 +69,10 @@ class DOCXParser(BaseParser):
         max_chapter_level (int): Maximum heading level for chapters. Default: 2
 
     Example:
-        >>> parser = DOCXParser({'extract_images': True})
+        >>> parser = DOCXParser({
+        ...     'extract_images': True,
+        ...     'image_output_dir': '/path/to/images'
+        ... })
         >>> doc = parser.parse(Path("report.docx"))
         >>> print(f"Chapters: {len(doc.chapters)}")
     """
@@ -402,11 +408,13 @@ class DOCXParser(BaseParser):
     def _paragraph_to_markdown(self, para: Paragraph) -> str:
         """Convert DOCX paragraph to markdown.
 
-        Handles:
+        Currently Handles:
         - Heading styles → markdown headings (# ## ###)
         - Bold text → **text**
         - Italic text → *text*
-        - Links → [text](url)
+
+        Not Yet Implemented (TODO):
+        - Hyperlinks → [text](url)
         - Lists → - item or 1. item
 
         Args:
@@ -443,9 +451,9 @@ class DOCXParser(BaseParser):
         """
         text = str(run.text) if run.text else ""
 
-        # Handle hyperlinks
-        # Note: Hyperlinks in DOCX are complex - they're in the XML structure
-        # For now, we'll just return the text
+        # TODO: Handle hyperlinks - they're complex in DOCX XML structure
+        # Hyperlinks are stored in the document's relationships, not directly
+        # in runs. Future implementation needed to extract and convert them.
 
         # Apply formatting
         if run.bold and run.italic:
@@ -498,6 +506,9 @@ class DOCXParser(BaseParser):
         |----------|----------|
         | Cell 1   | Cell 2   |
 
+        Note: Pipe characters (|) in cell content are escaped as \\| to prevent
+        breaking the table formatting.
+
         Args:
             table: python-docx Table object.
 
@@ -515,6 +526,8 @@ class DOCXParser(BaseParser):
             for cell in row.cells:
                 # Get cell text (strip newlines and extra whitespace)
                 cell_text = cell.text.strip().replace("\n", " ")
+                # Escape pipe characters to prevent breaking table formatting
+                cell_text = cell_text.replace("|", "\\|")
                 cells.append(cell_text)
 
             # Create markdown row
@@ -531,40 +544,43 @@ class DOCXParser(BaseParser):
     def _extract_images(self, docx: Any) -> List[ImageReference]:
         """Extract embedded images from DOCX.
 
+        IMPORTANT: Images are only extracted when image_output_dir is specified.
+        If image_output_dir is None, images are not extracted and an empty list
+        is returned. This prevents creating ImageReference objects with invalid
+        file paths to deleted temporary directories.
+
         Process:
-        1. Access document relationships (docx.part.rels)
-        2. Find image relationships (rId)
-        3. Extract image data
-        4. Save to output directory
-        5. Create ImageReference objects
+        1. Check if image_output_dir is specified
+        2. If not, return empty list
+        3. Access document relationships (docx.part.rels)
+        4. Find image relationships (rId)
+        5. Extract image data
+        6. Save to output directory
+        7. Create ImageReference objects
 
         Args:
             docx: DocxDocument object.
 
         Returns:
-            List of ImageReference objects.
+            List of ImageReference objects. Empty list if image_output_dir is None.
         """
-        images: List[ImageReference] = []
-
         # Determine output directory
         image_output_dir = self.options.get("image_output_dir")
-        use_persistent_dir = image_output_dir is not None
+
+        # Only extract images if a persistent output directory is specified
+        if image_output_dir is None:
+            logger.info(
+                "Skipping image extraction: no image_output_dir specified. "
+                "Set image_output_dir option to extract images."
+            )
+            return []
 
         try:
-            if use_persistent_dir:
-                # Use persistent directory
-                assert image_output_dir is not None  # Type narrowing for mypy
-                output_path = Path(image_output_dir)
-                output_path.mkdir(parents=True, exist_ok=True)
-                logger.info(f"Saving images to persistent directory: {output_path}")
-                images = self._extract_images_to_directory(docx, output_path)
-            else:
-                # Use temporary directory
-                logger.info("Saving images to temporary directory (will be deleted)")
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    temp_path = Path(temp_dir)
-                    images = self._extract_images_to_directory(docx, temp_path)
-
+            # Use persistent directory
+            output_path = Path(image_output_dir)
+            output_path.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Saving images to persistent directory: {output_path}")
+            images = self._extract_images_to_directory(docx, output_path)
             logger.info(f"Successfully extracted {len(images)} images")
             return images
 
@@ -667,14 +683,34 @@ class DOCXParser(BaseParser):
         return images
 
     def _count_words(self, text: str) -> int:
-        """Count words in text.
+        """Count words in text, excluding markdown syntax.
+
+        Strips markdown formatting characters before counting to provide
+        accurate word count of actual content.
 
         Args:
-            text: Text to count words in.
+            text: Text to count words in (may contain markdown).
 
         Returns:
-            Word count.
+            Word count (excluding markdown syntax).
         """
+        # Remove markdown headings
+        text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+
+        # Remove markdown bold/italic/bold-italic
+        text = re.sub(r"\*\*\*(.+?)\*\*\*", r"\1", text)  # ***text***
+        text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)  # **text**
+        text = re.sub(r"\*(.+?)\*", r"\1", text)  # *text*
+
+        # Remove markdown table pipes and separators
+        text = re.sub(r"\|", " ", text)  # Remove table pipes
+        text = re.sub(
+            r"^[\s\-]+$", "", text, flags=re.MULTILINE
+        )  # Remove separator rows
+
+        # Remove escaped characters
+        text = re.sub(r"\\(.)", r"\1", text)  # \| → |
+
         return len(text.split())
 
     def _estimate_reading_time(self, word_count: int) -> int:
