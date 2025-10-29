@@ -1,0 +1,62 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run release-please
+        uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          # Release type for Python projects
+          release-type: python
+
+          # Package name (must match pyproject.toml)
+          package-name: omniparser
+
+          # Changelog sections configuration
+          changelog-types: |
+            [
+              {"type":"feat","section":"Features","hidden":false},
+              {"type":"fix","section":"Bug Fixes","hidden":false},
+              {"type":"docs","section":"Documentation","hidden":false},
+              {"type":"test","section":"Tests","hidden":false},
+              {"type":"refactor","section":"Code Refactoring","hidden":false},
+              {"type":"perf","section":"Performance Improvements","hidden":false},
+              {"type":"chore","section":"Miscellaneous","hidden":true},
+              {"type":"build","section":"Build System","hidden":true},
+              {"type":"ci","section":"Continuous Integration","hidden":true},
+              {"type":"style","section":"Styles","hidden":true}
+            ]
+
+      # Optional: Publish to PyPI when a release is created
+      # Uncomment and configure when ready to publish
+      # - name: Publish to PyPI
+      #   if: ${{ steps.release.outputs.release_created }}
+      #   uses: pypa/gh-action-pypi-publish@release/v1
+      #   with:
+      #     password: ${{ secrets.PYPI_API_TOKEN }}
+
+      # Optional: Upload release assets
+      # - name: Upload Release Artifacts
+      #   if: ${{ steps.release.outputs.release_created }}
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   run: |
+      #     gh release upload ${{ steps.release.outputs.tag_name }} dist/*
+
+outputs:
+  release_created: ${{ steps.release.outputs.release_created }}
+  tag_name: ${{ steps.release.outputs.tag_name }}
+  major: ${{ steps.release.outputs.major }}
+  minor: ${{ steps.release.outputs.minor }}
+  patch: ${{ steps.release.outputs.patch }}
