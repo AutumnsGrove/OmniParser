@@ -697,3 +697,103 @@ class TestMarkdownParserEdgeCases:
         # The horizontal rule should remain because the underline length
         # doesn't match the text length
         assert "## Some text" not in normalized or "---" in normalized
+
+    def test_custom_field_typo_warnings(self, tmp_path):
+        """Test warnings for custom field typos."""
+        parser = MarkdownParser()
+        frontmatter = {
+            "titel": "Test Document",  # Typo: should be "title"
+            "autor": "John Doe",  # Typo: should be "author"
+            "custom_field": "valid",  # Not a typo
+        }
+        file_path = tmp_path / "test.md"
+        file_path.write_text("# Test")
+
+        metadata = parser._frontmatter_to_metadata(frontmatter, file_path)
+
+        # Should have warnings for typos
+        assert any("titel" in w.lower() for w in parser._warnings)
+        assert any("autor" in w.lower() for w in parser._warnings)
+        # Custom fields should include both typos and valid fields
+        assert metadata.custom_fields is not None
+        assert "titel" in metadata.custom_fields
+        assert "autor" in metadata.custom_fields
+        assert "custom_field" in metadata.custom_fields
+
+    def test_frontmatter_ending_without_newline(self):
+        """Test frontmatter extraction when document ends with frontmatter."""
+        parser = MarkdownParser()
+        # Document ending with frontmatter (no trailing newline after ---)
+        text = """---
+title: Test Document
+author: John Doe
+---"""
+        frontmatter, content = parser._extract_frontmatter(text)
+
+        # Should successfully extract frontmatter
+        assert frontmatter is not None
+        assert frontmatter["title"] == "Test Document"
+        assert frontmatter["author"] == "John Doe"
+        # Content should be empty (or just the ending marker)
+        assert len(content.strip()) == 0
+
+    def test_frontmatter_with_trailing_newline(self):
+        """Test frontmatter extraction with trailing newline (standard case)."""
+        parser = MarkdownParser()
+        text = """---
+title: Test Document
+---
+
+# Content here
+"""
+        frontmatter, content = parser._extract_frontmatter(text)
+
+        # Should successfully extract frontmatter
+        assert frontmatter is not None
+        assert frontmatter["title"] == "Test Document"
+        # Content should have the markdown
+        assert "# Content here" in content
+
+    def test_regex_patterns_are_compiled(self):
+        """Test that regex patterns are pre-compiled class variables."""
+        # Verify patterns exist and are compiled regex objects
+        assert hasattr(MarkdownParser, "_FRONTMATTER_PATTERN")
+        assert hasattr(MarkdownParser, "_IMAGE_PATTERN")
+        assert hasattr(MarkdownParser, "_CODE_BLOCK_PATTERN")
+
+        # Verify they are compiled regex objects
+        import re
+
+        assert isinstance(MarkdownParser._FRONTMATTER_PATTERN, re.Pattern)
+        assert isinstance(MarkdownParser._IMAGE_PATTERN, re.Pattern)
+        assert isinstance(MarkdownParser._CODE_BLOCK_PATTERN, re.Pattern)
+
+    def test_validate_custom_fields_no_typos(self):
+        """Test custom field validation with no typos."""
+        parser = MarkdownParser()
+        custom_fields = {"custom_field1": "value1", "custom_field2": "value2"}
+
+        # Should not add any warnings
+        initial_warnings = len(parser._warnings)
+        parser._validate_custom_fields(custom_fields)
+        assert len(parser._warnings) == initial_warnings
+
+    def test_validate_custom_fields_with_typos(self):
+        """Test custom field validation detects typos."""
+        parser = MarkdownParser()
+        custom_fields = {
+            "titel": "Test",  # Typo of "title"
+            "auther": "John",  # Typo of "author"
+            "descripton": "Test desc",  # Typo of "description"
+        }
+
+        initial_warnings = len(parser._warnings)
+        parser._validate_custom_fields(custom_fields)
+
+        # Should have added 3 warnings
+        assert len(parser._warnings) == initial_warnings + 3
+        # Check warnings mention the correct field names
+        warnings_text = " ".join(parser._warnings)
+        assert "titel" in warnings_text.lower()
+        assert "auther" in warnings_text.lower()
+        assert "descripton" in warnings_text.lower()

@@ -52,6 +52,20 @@ class MarkdownParser(BaseParser):
         >>> print(doc.metadata.title)
     """
 
+    # Pre-compiled regex patterns for performance
+    _FRONTMATTER_PATTERN = re.compile(r"^---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL)
+    _IMAGE_PATTERN = re.compile(r"!\[([^\]]*)\]\(([^\)]+)\)")
+    _DATA_URI_PATTERN = re.compile(r"data:image/(\w+)")
+    _FORMAT_QUERY_PATTERN = re.compile(r"(?:format|fmt)=(\w+)", re.IGNORECASE)
+    _CODE_BLOCK_PATTERN = re.compile(r"```[\s\S]*?```")
+    _INLINE_CODE_PATTERN = re.compile(r"`[^`]+`")
+    _URL_PATTERN = re.compile(r"https?://\S+")
+    _IMAGE_SYNTAX_PATTERN = re.compile(r"!\[([^\]]*)\]\([^\)]+\)")
+    _LINK_SYNTAX_PATTERN = re.compile(r"\[([^\]]+)\]\([^\)]+\)")
+    _HEADING_PATTERN = re.compile(r"^#{1,6}\s+", re.MULTILINE)
+    _EMPHASIS_DOUBLE_PATTERN = re.compile(r"(\*\*|__)(.*?)\1")
+    _EMPHASIS_SINGLE_PATTERN = re.compile(r"(\*|_)(.*?)\1")
+
     def __init__(self, options: Optional[Dict[str, Any]] = None):
         """Initialize Markdown parser with options.
 
@@ -300,8 +314,8 @@ class MarkdownParser(BaseParser):
         """
         # Pattern matches YAML frontmatter at start of document
         # Must start with --- and end with ---
-        pattern = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
-        match = pattern.match(text)
+        # Trailing newline is optional to support documents ending with frontmatter
+        match = self._FRONTMATTER_PATTERN.match(text)
 
         if not match:
             # No frontmatter found
@@ -434,24 +448,27 @@ class MarkdownParser(BaseParser):
         file_size = file_path.stat().st_size
 
         # Store all other frontmatter fields in custom_fields
-        custom_fields = {
-            k: v
-            for k, v in frontmatter.items()
-            if k
-            not in [
-                "title",
-                "author",
-                "authors",
-                "date",
-                "tags",
-                "keywords",
-                "description",
-                "summary",
-                "language",
-                "lang",
-                "publisher",
-            ]
+        standard_fields = {
+            "title",
+            "author",
+            "authors",
+            "date",
+            "tags",
+            "keywords",
+            "description",
+            "summary",
+            "language",
+            "lang",
+            "publisher",
         }
+
+        custom_fields = {
+            k: v for k, v in frontmatter.items() if k not in standard_fields
+        }
+
+        # Validate custom fields for common typos
+        if custom_fields:
+            self._validate_custom_fields(custom_fields)
 
         return Metadata(
             title=title,
@@ -467,6 +484,41 @@ class MarkdownParser(BaseParser):
             file_size=file_size,
             custom_fields=custom_fields if custom_fields else None,
         )
+
+    def _validate_custom_fields(self, custom_fields: Dict[str, Any]) -> None:
+        """Validate custom fields for common typos.
+
+        Checks for keys that might be typos of standard metadata fields
+        and adds warnings if found.
+
+        Args:
+            custom_fields: Dictionary of custom frontmatter fields.
+        """
+        # Common typos for standard fields
+        typo_mappings = {
+            "titel": "title",
+            "tittle": "title",
+            "autor": "author",
+            "auteur": "author",
+            "auther": "author",
+            "publiser": "publisher",
+            "languaje": "language",
+            "langue": "language",
+            "descripton": "description",
+            "discription": "description",
+            "desciption": "description",
+        }
+
+        for field_name in custom_fields.keys():
+            # Check for exact typo matches
+            if field_name.lower() in typo_mappings:
+                correct = typo_mappings[field_name.lower()]
+                warning = (
+                    f"Custom field '{field_name}' might be a typo of '{correct}'. "
+                    f"Did you mean '{correct}' instead?"
+                )
+                logger.warning(warning)
+                self._warnings.append(warning)
 
     def _create_default_metadata(self, file_path: Path) -> Metadata:
         """Create default metadata when no frontmatter is present.
@@ -571,9 +623,7 @@ class MarkdownParser(BaseParser):
         images: List[ImageReference] = []
 
         # Pattern for markdown images: ![alt](url)
-        pattern = re.compile(r"!\[([^\]]*)\]\(([^\)]+)\)")
-
-        for idx, match in enumerate(pattern.finditer(text), start=1):
+        for idx, match in enumerate(self._IMAGE_PATTERN.finditer(text), start=1):
             alt_text = match.group(1).strip() or None
             image_url = match.group(2).strip()
             position = match.start()
@@ -614,14 +664,14 @@ class MarkdownParser(BaseParser):
         """
         # Handle data URIs
         if url.startswith("data:"):
-            match = re.match(r"data:image/(\w+)", url)
+            match = self._DATA_URI_PATTERN.match(url)
             return match.group(1) if match else "unknown"
 
         # Check for query parameters with format
         if "?" in url:
             query_part = url.split("?", 1)[1]
             # Look for format=xxx or fmt=xxx in query
-            format_match = re.search(r"(?:format|fmt)=(\w+)", query_part, re.IGNORECASE)
+            format_match = self._FORMAT_QUERY_PATTERN.search(query_part)
             if format_match:
                 return format_match.group(1).lower()
 
@@ -656,20 +706,20 @@ class MarkdownParser(BaseParser):
             Word count.
         """
         # Remove code blocks
-        text = re.sub(r"```[\s\S]*?```", "", text)
+        text = self._CODE_BLOCK_PATTERN.sub("", text)
         # Remove inline code
-        text = re.sub(r"`[^`]+`", "", text)
+        text = self._INLINE_CODE_PATTERN.sub("", text)
         # Remove URLs
-        text = re.sub(r"https?://\S+", "", text)
+        text = self._URL_PATTERN.sub("", text)
         # Remove markdown image syntax
-        text = re.sub(r"!\[([^\]]*)\]\([^\)]+\)", r"\1", text)
+        text = self._IMAGE_SYNTAX_PATTERN.sub(r"\1", text)
         # Remove markdown link syntax, keep link text
-        text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
+        text = self._LINK_SYNTAX_PATTERN.sub(r"\1", text)
         # Remove markdown heading markers
-        text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+        text = self._HEADING_PATTERN.sub("", text)
         # Remove emphasis markers (but not in the middle of words)
-        text = re.sub(r"(\*\*|__)(.*?)\1", r"\2", text)
-        text = re.sub(r"(\*|_)(.*?)\1", r"\2", text)
+        text = self._EMPHASIS_DOUBLE_PATTERN.sub(r"\2", text)
+        text = self._EMPHASIS_SINGLE_PATTERN.sub(r"\2", text)
         # Count remaining words
         return len([w for w in text.split() if w.strip()])
 
