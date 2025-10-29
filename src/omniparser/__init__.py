@@ -31,6 +31,7 @@ from .exceptions import (
 # Parsers (for advanced usage - users can instantiate directly if needed)
 from .parsers.epub_parser import EPUBParser
 from .parsers.html_parser import HTMLParser
+from .parsers.docx_parser import DOCXParser
 from .parsers.text_parser import TextParser
 
 # Version
@@ -58,6 +59,7 @@ __all__ = [
     # Parsers
     "EPUBParser",
     "HTMLParser",
+    "DOCXParser",
     "TextParser",
     # Version
     "__version__",
