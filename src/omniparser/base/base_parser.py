@@ -12,7 +12,7 @@ Classes:
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 from ..models import Document, ImageReference
 
@@ -44,11 +44,11 @@ class BaseParser(ABC):
         self.options = options or {}
 
     @abstractmethod
-    def parse(self, file_path: Path) -> Document:
+    def parse(self, file_path: Union[Path, str]) -> Document:
         """Parse document and return Document object.
 
         Args:
-            file_path: Path to file to parse.
+            file_path: Path to file to parse, or URL string for web content.
 
         Returns:
             Document object with parsed content.
@@ -56,26 +56,27 @@ class BaseParser(ABC):
         Raises:
             ParsingError: If parsing fails.
             FileReadError: If file cannot be read.
+            NetworkError: If URL fetch fails (for parsers supporting URLs).
         """
         pass
 
     @abstractmethod
-    def supports_format(self, file_path: Path) -> bool:
+    def supports_format(self, file_path: Union[Path, str]) -> bool:
         """Check if this parser supports the file format.
 
         Args:
-            file_path: Path to check.
+            file_path: Path to check, or URL string for web content.
 
         Returns:
             True if format is supported, False otherwise.
         """
         pass
 
-    def extract_images(self, file_path: Path) -> List[ImageReference]:
+    def extract_images(self, file_path: Union[Path, str]) -> List[ImageReference]:
         """Extract images from document (optional override).
 
         Args:
-            file_path: Path to document.
+            file_path: Path to document, or URL string for web content.
 
         Returns:
             List of ImageReference objects. Empty list by default.

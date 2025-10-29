@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Document Without Headings</title>
+    <meta name="description" content="Testing documents without heading structure">
+</head>
+<body>
+    <article>
+        <p>This document has no heading tags to test the fallback behavior of chapter detection.</p>
+
+        <p>When no headings are present, the parser should create a single chapter with the title "Full Document".</p>
+
+        <p>This tests the edge case handling for documents that don't have a clear hierarchical structure.</p>
+
+        <p><strong>Important:</strong> The parser should still extract the content properly even without headings.</p>
+    </article>
+</body>
+</html>
