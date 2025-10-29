@@ -41,6 +41,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Maximum image file size in bytes (10MB)
+MAX_IMAGE_SIZE = 10 * 1024 * 1024
+
 
 @dataclass
 class ImageAnalysis:
@@ -125,6 +128,14 @@ def analyze_image(
     path = Path(image_path)
     if not path.exists():
         raise ValueError(f"Image file not found: {image_path}")
+
+    # Check file size to avoid memory issues
+    file_size = path.stat().st_size
+    if file_size > MAX_IMAGE_SIZE:
+        raise ValueError(
+            f"Image file too large: {file_size / (1024 * 1024):.1f}MB. "
+            f"Maximum size: {MAX_IMAGE_SIZE / (1024 * 1024)}MB"
+        )
 
     try:
         ai_config = AIConfig(ai_options)

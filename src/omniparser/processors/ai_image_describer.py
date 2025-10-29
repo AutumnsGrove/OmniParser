@@ -37,6 +37,9 @@ from ..models import Document, ImageReference
 
 logger = logging.getLogger(__name__)
 
+# Maximum image file size in bytes (10MB)
+MAX_IMAGE_SIZE = 10 * 1024 * 1024
+
 
 def describe_image(
     image: ImageReference,
@@ -84,6 +87,14 @@ def describe_image(
     image_path = Path(image.file_path)
     if not image_path.exists():
         raise ValueError(f"Image file not found: {image.file_path}")
+
+    # Check file size to avoid memory issues
+    file_size = image_path.stat().st_size
+    if file_size > MAX_IMAGE_SIZE:
+        raise ValueError(
+            f"Image file too large: {file_size / (1024 * 1024):.1f}MB. "
+            f"Maximum size: {MAX_IMAGE_SIZE / (1024 * 1024)}MB"
+        )
 
     try:
         ai_config = AIConfig(ai_options)
