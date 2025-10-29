@@ -7,22 +7,24 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 **Project:** OmniParser - Universal Document Parser
 **Purpose:** Transform any document, web page, or structured data into clean, standardized markdown with comprehensive metadata extraction
-**Status:** Phase 2.3 Complete - EPUB Parser Production-Ready (v0.1.0)
+**Status:** Phase 2.8 Complete - 6 Parsers + AI Features (v0.3.0)
 
 **Tech Stack:**
 - **Language:** Python 3.10+
 - **Package Manager:** UV (modern Python package manager)
 - **Build System:** Hatchling
-- **Key Libraries:** ebooklib (EPUB), PyMuPDF (PDF planned), python-docx (DOCX planned), BeautifulSoup4 (HTML parsing), ftfy (text processing)
+- **Key Libraries:** ebooklib (EPUB), PyMuPDF (PDF), python-docx (DOCX), BeautifulSoup4 (HTML parsing), ftfy (text processing)
+- **AI Integration:** anthropic SDK (Claude API), OpenRouter support, Vision API integration
 - **Testing:** pytest, pytest-cov
 - **Code Quality:** Black formatter, mypy type checking
 
 **Architecture:**
 - Modular parser architecture with `BaseParser` abstract class
-- Format-specific parsers (EPUBParser implemented, PDF/DOCX/HTML planned)
+- Format-specific parsers: 6 implemented (EPUB ✅, HTML ✅, PDF ✅, DOCX 🔶 beta, Markdown ✅, Text ✅)
+- AI processors: 5 modules (summarizer, tagger, quality, image_analyzer, image_describer)
 - Universal `Document` data model for consistent output across all formats
 - Post-processing components (chapter detection, text cleaning, metadata extraction)
-- Comprehensive test suite (357 tests, 100% passing)
+- Comprehensive test suite (880 tests collected, 830 passing = 94.3%)
 
 **Key Resources:**
 - Full specification: `docs/OMNIPARSER_PROJECT_SPEC.md` (36,000 words)
