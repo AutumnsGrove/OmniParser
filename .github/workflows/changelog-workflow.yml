@@ -33,8 +33,6 @@ jobs:
         with:
           config: cliff.toml
           args: --verbose --unreleased --prepend CHANGELOG.md
-        env:
-          OUTPUT: CHANGELOG.md
 
       - name: Check for changes
         id: check_changes
