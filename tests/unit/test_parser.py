@@ -111,15 +111,23 @@ class TestParseDocument:
             # Verify options were passed to EPUBParser
             MockParser.assert_called_once_with(options)
 
-    def test_parse_document_unsupported_pdf(self, tmp_path):
-        """Test that PDF files raise UnsupportedFormatError."""
+    def test_parse_document_pdf_format(self, tmp_path):
+        """Test that PDF files are routed to PDFParser."""
         test_file = tmp_path / "test.pdf"
         test_file.write_text("dummy content")
 
-        with pytest.raises(
-            UnsupportedFormatError, match="PDF format not yet implemented"
-        ):
-            parse_document(test_file)
+        with patch("omniparser.parser.PDFParser") as MockParser:
+            mock_parser_instance = Mock()
+            mock_doc = Mock(spec=Document)
+            mock_parser_instance.parse.return_value = mock_doc
+            MockParser.return_value = mock_parser_instance
+
+            result = parse_document(test_file)
+
+            # Verify PDFParser was instantiated and used
+            MockParser.assert_called_once_with(None)
+            mock_parser_instance.parse.assert_called_once()
+            assert result == mock_doc
 
     def test_parse_document_unsupported_docx(self, tmp_path):
         """Test that DOCX files raise UnsupportedFormatError."""
@@ -239,9 +247,9 @@ class TestGetSupportedFormats:
         assert ".epub" in formats
 
     def test_get_supported_formats_includes_html(self):
-        """Test that EPUB and HTML formats are supported currently."""
+        """Test that EPUB, PDF, and HTML formats are supported currently."""
         formats = get_supported_formats()
-        assert formats == [".epub", ".html", ".htm"]
+        assert formats == [".epub", ".pdf", ".html", ".htm"]
 
 
 class TestIsFormatSupported:
@@ -250,12 +258,12 @@ class TestIsFormatSupported:
     def test_is_format_supported_with_string_path(self):
         """Test is_format_supported with string path."""
         assert is_format_supported("test.epub") is True
-        assert is_format_supported("test.pdf") is False
+        assert is_format_supported("test.pdf") is True
 
     def test_is_format_supported_with_path_object(self):
         """Test is_format_supported with Path object."""
         assert is_format_supported(Path("test.epub")) is True
-        assert is_format_supported(Path("test.pdf")) is False
+        assert is_format_supported(Path("test.pdf")) is True
 
     def test_is_format_supported_case_insensitive(self):
         """Test that extension checking is case-insensitive."""
@@ -267,11 +275,11 @@ class TestIsFormatSupported:
         """Test is_format_supported with various formats."""
         # Supported
         assert is_format_supported("book.epub") is True
+        assert is_format_supported("doc.pdf") is True
         assert is_format_supported("page.html") is True
         assert is_format_supported("page.htm") is True
 
         # Unsupported (but planned)
-        assert is_format_supported("doc.pdf") is False
         assert is_format_supported("doc.docx") is False
         assert is_format_supported("readme.md") is False
         assert is_format_supported("notes.txt") is False

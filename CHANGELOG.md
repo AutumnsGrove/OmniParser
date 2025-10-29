@@ -37,12 +37,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update CHANGELOG.md
 - Update CHANGELOG.md
 - Update CHANGELOG.md
+- **pdf**: Add comprehensive documentation and improve code quality
 - Update CHANGELOG.md
 - Update CHANGELOG.md
 - Update CHANGELOG.md
 - Update CHANGELOG.md
 - Update CHANGELOG.md
 - Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+
+### Refactored
+
+- **pdf**: Address PR review feedback with critical fixes
+- **pdf**: Implement final PR review improvements
+
+### Testing
+
+- **pdf**: Add comprehensive unit tests for PDFParser
+- **pdf**: Add integration tests for PDF parsing
+- Update parser tests to reflect PDF support
+### Performance
+
+- **markdown**: Add regex compilation optimization and metadata validation
+
+### Testing
+
+- **markdown**: Add test fixtures for markdown parser
+- **markdown**: Add comprehensive unit tests for MarkdownParser
+- **markdown**: Add integration tests for MarkdownParser
+
+### Miscellaneous Tasks
+
+- Move files and updated cliff.toml file
+
+## [Unreleased]
+
+### Added
+
+- Add automated changelog generation with git-cliff
+- Add release-please for automated version management
+- **pdf**: Add PDFParser implementation with font-based heading detection
+- **pdf**: Integrate PDFParser with main parser module
+- **markdown**: Add MarkdownParser class
+- **markdown**: Register MarkdownParser in parser registry
+- **text**: Implement TextParser with encoding detection and chapter detection
+
+### Fixed
+
+- Update changelog workflow to use git-cliff-action v4
+- Configure git-cliff to use prepend mode instead of regenerating changelog
+- Remove conflicting OUTPUT env variable from git-cliff workflow
+- **markdown**: Improve word counting, heading normalization, and image format detection
+- **text**: Fix word count mismatch and implement PR review feedback
+
+### Documentation
+
+- Update CHANGELOG.md
+- Add troubleshooting for changelog content loss and tag requirements
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Add comprehensive agent prompts for parallel parser development
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- **pdf**: Add comprehensive documentation and improve code quality
+- Update CHANGELOG.md
+
+### Refactored
+
+- **pdf**: Address PR review feedback with critical fixes
+- **pdf**: Implement final PR review improvements
+
+### Testing
+
+- **pdf**: Add comprehensive unit tests for PDFParser
+- **pdf**: Add integration tests for PDF parsing
+- Update parser tests to reflect PDF support
 - Update CHANGELOG.md
 - Update CHANGELOG.md
 - Update CHANGELOG.md
@@ -68,6 +141,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add automated changelog generation with git-cliff
 - Add release-please for automated version management
+- **pdf**: Add PDFParser implementation with font-based heading detection
+- **pdf**: Integrate PDFParser with main parser module
 - **markdown**: Add MarkdownParser class
 - **markdown**: Register MarkdownParser in parser registry
 - **text**: Implement TextParser with encoding detection and chapter detection
@@ -90,53 +165,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update CHANGELOG.md
 - Update CHANGELOG.md
 - Update CHANGELOG.md
-- Update CHANGELOG.md
-- Update CHANGELOG.md
-- Update CHANGELOG.md
-- Update CHANGELOG.md
+- **pdf**: Add comprehensive documentation and improve code quality
 
-### Performance
+### Refactored
 
-- **markdown**: Add regex compilation optimization and metadata validation
+- **pdf**: Address PR review feedback with critical fixes
 
 ### Testing
 
-- **markdown**: Add test fixtures for markdown parser
-- **markdown**: Add comprehensive unit tests for MarkdownParser
-- **markdown**: Add integration tests for MarkdownParser
-
-### Miscellaneous Tasks
-
-- Move files and updated cliff.toml file
-
-## [Unreleased]
-
-### Added
-
-- Add automated changelog generation with git-cliff
-- Add release-please for automated version management
-- **markdown**: Add MarkdownParser class
-- **markdown**: Register MarkdownParser in parser registry
-- **text**: Implement TextParser with encoding detection and chapter detection
-
-### Fixed
-
-- Update changelog workflow to use git-cliff-action v4
-- Configure git-cliff to use prepend mode instead of regenerating changelog
-- Remove conflicting OUTPUT env variable from git-cliff workflow
-- **markdown**: Improve word counting, heading normalization, and image format detection
-- **text**: Fix word count mismatch and implement PR review feedback
-
-### Documentation
-
-- Update CHANGELOG.md
-- Add troubleshooting for changelog content loss and tag requirements
-- Update CHANGELOG.md
-- Update CHANGELOG.md
-- Add comprehensive agent prompts for parallel parser development
-- Update CHANGELOG.md
-- Update CHANGELOG.md
-- Update CHANGELOG.md
+- **pdf**: Add comprehensive unit tests for PDFParser
+- **pdf**: Add integration tests for PDF parsing
+- Update parser tests to reflect PDF support
 - Update CHANGELOG.md
 - Update CHANGELOG.md
 - Update CHANGELOG.md
@@ -157,6 +196,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add automated changelog generation with git-cliff
 - Add release-please for automated version management
+- **pdf**: Add PDFParser implementation with font-based heading detection
+- **pdf**: Integrate PDFParser with main parser module
 - **markdown**: Add MarkdownParser class
 - **markdown**: Register MarkdownParser in parser registry
 
@@ -177,6 +218,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update CHANGELOG.md
 - Update CHANGELOG.md
 
+### Refactored
+
+- **pdf**: Address PR review feedback with critical fixes
+
+### Testing
+
+- **pdf**: Add comprehensive unit tests for PDFParser
+- **pdf**: Add integration tests for PDF parsing
+- Update parser tests to reflect PDF support
 ### Testing
 
 - **markdown**: Add test fixtures for markdown parser
@@ -193,6 +243,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add automated changelog generation with git-cliff
 - Add release-please for automated version management
+- **pdf**: Add PDFParser implementation with font-based heading detection
+- **pdf**: Integrate PDFParser with main parser module
 - **markdown**: Add MarkdownParser class
 - **markdown**: Register MarkdownParser in parser registry
 
@@ -213,6 +265,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Testing
 
+- **pdf**: Add comprehensive unit tests for PDFParser
+- **pdf**: Add integration tests for PDF parsing
+- Update parser tests to reflect PDF support
 - **markdown**: Add test fixtures for markdown parser
 - **markdown**: Add comprehensive unit tests for MarkdownParser
 - **markdown**: Add integration tests for MarkdownParser
@@ -274,6 +329,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update changelog workflow to use git-cliff-action v4
 - Configure git-cliff to use prepend mode instead of regenerating changelog
 - Remove conflicting OUTPUT env variable from git-cliff workflow
+- **text**: Fix word count mismatch and implement PR review feedback
 - Address PR review feedback for DOCX parser
 - Final PR review fixes for production readiness
 - **text**: Fix word count mismatch and implement PR review feedback
