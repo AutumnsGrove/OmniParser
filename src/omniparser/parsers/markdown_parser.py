@@ -10,6 +10,7 @@ Classes:
     MarkdownParser: Parser for Markdown files with optional YAML frontmatter.
 """
 
+# Standard library
 import logging
 import re
 import time
@@ -18,8 +19,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+# Third-party
 import yaml  # type: ignore[import-untyped]
 
+# Local
 from ..base.base_parser import BaseParser
 from ..exceptions import FileReadError, ParsingError, ValidationError
 from ..models import Chapter, Document, ImageReference, Metadata, ProcessingInfo

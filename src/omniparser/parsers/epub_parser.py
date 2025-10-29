@@ -9,6 +9,7 @@ cleaning.
 Ported and adapted from epub2tts project with TTS-specific features removed.
 """
 
+# Standard library
 import logging
 import re
 import tempfile
@@ -17,10 +18,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+# Third-party
 import ebooklib
 from ebooklib import epub
 from PIL import Image
 
+# Local
 from ..base.base_parser import BaseParser
 from ..exceptions import FileReadError, ParsingError, ValidationError
 from ..models import Chapter, Document, ImageReference, Metadata, ProcessingInfo

@@ -18,6 +18,7 @@ Not Yet Implemented:
 - Hyperlink extraction and conversion - TODO
 """
 
+# Standard library
 import io
 import logging
 import re
@@ -26,6 +27,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+# Third-party
 from docx import Document as DocxDocument  # type: ignore[import]
 from docx.oxml.table import CT_Tbl
 from docx.oxml.text.paragraph import CT_P
@@ -33,6 +35,7 @@ from docx.table import Table
 from docx.text.paragraph import Paragraph
 from PIL import Image
 
+# Local
 from ..base.base_parser import BaseParser
 from ..exceptions import FileReadError, ParsingError, ValidationError
 from ..models import Chapter, Document, ImageReference, Metadata, ProcessingInfo
