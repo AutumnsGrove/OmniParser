@@ -37,7 +37,7 @@ from .parsers.docx_parser import DOCXParser
 from .parsers.text_parser import TextParser
 
 # Version
-__version__ = "1.0.0"
+__version__ = "0.3.0"
 
 # Public API
 __all__ = [
