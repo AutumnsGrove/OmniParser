@@ -87,11 +87,10 @@ def sample_document_with_images(test_images: List[Path]) -> Document:
     for idx, img_path in enumerate(test_images[:3]):  # Use first 3 images
         img_ref = ImageReference(
             image_id=f"img_{idx:03d}",
+            position=0,  # Required parameter
             file_path=str(img_path),
-            format=img_path.suffix[1:].upper(),  # .png -> PNG
-            width=800,
-            height=600,
-            file_size=img_path.stat().st_size,
+            format=img_path.suffix[1:].lower(),  # .png -> png (lowercase)
+            size=(800, 600),  # Correct tuple format
         )
         images.append(img_ref)
 
@@ -130,27 +129,17 @@ Final section with the third image.
     )
 
 
-@pytest.mark.skipif(
-    not os.getenv("ANTHROPIC_API_KEY"),
-    reason="ANTHROPIC_API_KEY not set. Set it to run this test.",
-)
 class TestImageAnalysisIntegration:
     """Integration tests for AI image analysis with real API calls."""
 
-    def test_analyze_single_image_anthropic(self, test_images: List[Path]) -> None:
+    def test_analyze_single_image_anthropic(self, test_images: List[Path], ai_options_with_fallback) -> None:
         """Test analyzing a single image with Anthropic Claude."""
         if not test_images:
             pytest.skip("No test images available")
 
         image_path = test_images[0]
 
-        # Use Anthropic with Haiku (fast and cost-effective for testing)
-        ai_options = {
-            "ai_provider": "anthropic",
-            "ai_model": "claude-3-haiku-20240307",
-        }
-
-        result = analyze_image(image_path, ai_options=ai_options)
+        result = analyze_image(image_path, ai_options=ai_options_with_fallback)
 
         # Verify result structure
         assert isinstance(result, ImageAnalysis)
@@ -184,19 +173,14 @@ class TestImageAnalysisIntegration:
         print(f"   Text Content: {result.text_content[:50] if result.text_content else '(no text)'}...")
         print(f"   Alt Text: {result.alt_text}")
 
-    def test_analyze_multiple_image_types(self, test_images: List[Path]) -> None:
+    def test_analyze_multiple_image_types(self, test_images: List[Path], ai_options_with_fallback) -> None:
         """Test analyzing different types of images."""
         if len(test_images) < 3:
             pytest.skip("Need at least 3 test images")
 
-        ai_options = {
-            "ai_provider": "anthropic",
-            "ai_model": "claude-3-haiku-20240307",
-        }
-
         results = []
         for image_path in test_images[:3]:  # Test first 3 images
-            result = analyze_image(image_path, ai_options=ai_options)
+            result = analyze_image(image_path, ai_options=ai_options_with_fallback)
             results.append(result)
 
             # Each result should be valid
@@ -212,19 +196,14 @@ class TestImageAnalysisIntegration:
         for idx, (img, result) in enumerate(zip(test_images[:3], results)):
             print(f"   {idx+1}. {img.name}: {result.image_type} (confidence: {result.confidence})")
 
-    def test_analyze_batch_processing(self, test_images: List[Path]) -> None:
+    def test_analyze_batch_processing(self, test_images: List[Path], ai_options_with_fallback) -> None:
         """Test batch processing multiple images."""
         if len(test_images) < 2:
             pytest.skip("Need at least 2 test images")
 
-        ai_options = {
-            "ai_provider": "anthropic",
-            "ai_model": "claude-3-haiku-20240307",
-        }
-
         # Test batch processing with first 5 images (or fewer if not available)
         batch_images = test_images[:min(5, len(test_images))]
-        results = analyze_images_batch(batch_images, ai_options=ai_options)
+        results = analyze_images_batch(batch_images, ai_options=ai_options_with_fallback)
 
         # Should return results for all images
         assert len(results) == len(batch_images)
@@ -239,20 +218,15 @@ class TestImageAnalysisIntegration:
 
         print(f"\n✅ Batch processed {len(results)} images successfully")
 
-    def test_analyze_image_with_text_extraction(self, test_images: List[Path]) -> None:
+    def test_analyze_image_with_text_extraction(self, test_images: List[Path], ai_options_with_fallback) -> None:
         """Test text extraction from images (OCR)."""
         if not test_images:
             pytest.skip("No test images available")
 
-        ai_options = {
-            "ai_provider": "anthropic",
-            "ai_model": "claude-3-haiku-20240307",
-        }
-
         # Analyze all available images
         text_found_count = 0
         for image_path in test_images:
-            result = analyze_image(image_path, ai_options=ai_options)
+            result = analyze_image(image_path, ai_options=ai_options_with_fallback)
 
             if result.text_content and result.text_content.strip():
                 text_found_count += 1
@@ -262,56 +236,37 @@ class TestImageAnalysisIntegration:
         # At least report results (some images may not have text)
         print(f"\n📊 Text extraction summary: {text_found_count}/{len(test_images)} images contained text")
 
-    def test_analyze_image_error_handling_invalid_file(self) -> None:
+    def test_analyze_image_error_handling_invalid_file(self, ai_options_with_fallback) -> None:
         """Test error handling for invalid image file."""
-        ai_options = {
-            "ai_provider": "anthropic",
-            "ai_model": "claude-3-haiku-20240307",
-        }
-
         # Try analyzing non-existent file
         with pytest.raises((FileNotFoundError, ValueError)):
-            analyze_image(Path("/nonexistent/image.png"), ai_options=ai_options)
+            analyze_image(Path("/nonexistent/image.png"), ai_options=ai_options_with_fallback)
 
-    def test_analyze_image_error_handling_unsupported_format(self, tmp_path: Path) -> None:
+    def test_analyze_image_error_handling_unsupported_format(self, tmp_path: Path, ai_options_with_fallback) -> None:
         """Test error handling for unsupported image format."""
         # Create a fake .txt file
         fake_image = tmp_path / "not_an_image.txt"
         fake_image.write_text("This is not an image")
 
-        ai_options = {
-            "ai_provider": "anthropic",
-            "ai_model": "claude-3-haiku-20240307",
-        }
-
         # Should raise error for unsupported format
         with pytest.raises(ValueError, match="Unsupported image format"):
-            analyze_image(fake_image, ai_options=ai_options)
+            analyze_image(fake_image, ai_options=ai_options_with_fallback)
 
 
-@pytest.mark.skipif(
-    not os.getenv("ANTHROPIC_API_KEY"),
-    reason="ANTHROPIC_API_KEY not set. Set it to run this test.",
-)
 class TestImageDescriptionIntegration:
     """Integration tests for AI image description with real API calls."""
 
-    def test_describe_single_image_anthropic(self, test_images: List[Path]) -> None:
+    def test_describe_single_image_anthropic(self, test_images: List[Path], vision_capable_ai_options) -> None:
         """Test generating description for a single image."""
         if not test_images:
             pytest.skip("No test images available")
 
         image_path = test_images[0]
 
-        ai_options = {
-            "ai_provider": "anthropic",
-            "ai_model": "claude-3-haiku-20240307",
-        }
-
         description = describe_image(
-            image_path,
+            str(image_path),
             context="This image appears in a technical document about data visualization.",
-            ai_options=ai_options,
+            ai_options=vision_capable_ai_options,
         )
 
         # Verify description
@@ -322,24 +277,19 @@ class TestImageDescriptionIntegration:
         print(f"\n✅ Image Description for {image_path.name}:")
         print(f"   {description}")
 
-    def test_describe_image_with_context(self, test_images: List[Path]) -> None:
+    def test_describe_image_with_context(self, test_images: List[Path], vision_capable_ai_options) -> None:
         """Test that context influences the description."""
         if not test_images:
             pytest.skip("No test images available")
 
         image_path = test_images[0]
 
-        ai_options = {
-            "ai_provider": "anthropic",
-            "ai_model": "claude-3-haiku-20240307",
-        }
-
         # Test with different contexts
         context1 = "This diagram illustrates the software architecture."
         context2 = "This chart shows sales data over time."
 
-        desc1 = describe_image(image_path, context=context1, ai_options=ai_options)
-        desc2 = describe_image(image_path, context=context2, ai_options=ai_options)
+        desc1 = describe_image(str(image_path), context=context1, ai_options=vision_capable_ai_options)
+        desc2 = describe_image(str(image_path), context=context2, ai_options=vision_capable_ai_options)
 
         # Both should be valid descriptions
         assert isinstance(desc1, str) and len(desc1) > 0
@@ -350,17 +300,12 @@ class TestImageDescriptionIntegration:
         print(f"   Context 2: {desc2}")
 
     def test_describe_document_images_batch(
-        self, sample_document_with_images: Document
+        self, sample_document_with_images: Document, vision_capable_ai_options
     ) -> None:
         """Test batch description of all images in a document."""
-        ai_options = {
-            "ai_provider": "anthropic",
-            "ai_model": "claude-3-haiku-20240307",
-        }
-
         descriptions = describe_document_images(
             sample_document_with_images,
-            ai_options=ai_options,
+            ai_options=vision_capable_ai_options,
         )
 
         # Should return descriptions for all images
@@ -377,14 +322,9 @@ class TestImageDescriptionIntegration:
             print(f"   {img_id}: {desc}")
 
     def test_update_image_descriptions_in_document(
-        self, sample_document_with_images: Document
+        self, sample_document_with_images: Document, vision_capable_ai_options
     ) -> None:
         """Test updating image descriptions in a document."""
-        ai_options = {
-            "ai_provider": "anthropic",
-            "ai_model": "claude-3-haiku-20240307",
-        }
-
         # Initially, images should not have alt_text
         for img in sample_document_with_images.images:
             assert img.alt_text is None or img.alt_text == ""
@@ -392,7 +332,7 @@ class TestImageDescriptionIntegration:
         # Update descriptions
         updated_doc = update_image_descriptions(
             sample_document_with_images,
-            ai_options=ai_options,
+            ai_options=vision_capable_ai_options,
         )
 
         # Now images should have alt_text
@@ -405,44 +345,29 @@ class TestImageDescriptionIntegration:
         for img in updated_doc.images:
             print(f"   {img.image_id}: {img.alt_text}")
 
-    def test_describe_image_error_handling(self) -> None:
+    def test_describe_image_error_handling(self, vision_capable_ai_options) -> None:
         """Test error handling for image description."""
-        ai_options = {
-            "ai_provider": "anthropic",
-            "ai_model": "claude-3-haiku-20240307",
-        }
-
         # Try describing non-existent file
         with pytest.raises((FileNotFoundError, ValueError)):
             describe_image(
-                Path("/nonexistent/image.png"),
-                ai_options=ai_options,
+                str(Path("/nonexistent/image.png")),
+                ai_options=vision_capable_ai_options,
             )
 
 
-@pytest.mark.skipif(
-    not os.getenv("ANTHROPIC_API_KEY"),
-    reason="ANTHROPIC_API_KEY not set. Set it to run this test.",
-)
 class TestVisionModelValidation:
     """Integration tests for vision model validation."""
 
-    def test_vision_capable_model_works(self, test_images: List[Path]) -> None:
+    def test_vision_capable_model_works(self, test_images: List[Path], vision_capable_ai_options) -> None:
         """Test that vision-capable models work correctly."""
         if not test_images:
             pytest.skip("No test images available")
 
-        # Test with known vision-capable model
-        ai_options = {
-            "ai_provider": "anthropic",
-            "ai_model": "claude-3-haiku-20240307",
-        }
-
-        result = analyze_image(test_images[0], ai_options=ai_options)
+        result = analyze_image(test_images[0], ai_options=vision_capable_ai_options)
 
         # Should succeed without errors
         assert result is not None
-        assert "description" in result
+        assert hasattr(result, "description")
 
         print(f"\n✅ Vision-capable model (claude-3-haiku-20240307) works correctly")
 

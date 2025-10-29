@@ -1,0 +1,41 @@
++========================================================+
+|         AI MODULE COVERAGE - QUICK REFERENCE          |
++========================================================+
+
+OVERALL: 32% (215/668 statements)
+
+RISK ASSESSMENT BY MODULE:
++--+--------------------+----------+--------+----------+
+|  | MODULE             | COVERAGE | UNCOV  | PRIORITY |
++--+--------------------+----------+--------+----------+
+|1 | Quality Assessment |   11%    |  89%   | CRITICAL |
+|2 | Image Describer    |   16%    |  84%   | CRITICAL |
+|3 | Image Analyzer     |   19%    |  81%   | CRITICAL |
+|4 | Summarizer         |   44%    |  56%   | HIGH     |
+|5 | Tagger             |   42%    |  58%   | HIGH     |
+|6 | Secrets            |   44%    |  56%   | HIGH     |
+|7 | AI Config          |   63%    |  37%   | MEDIUM   |
++--+--------------------+----------+--------+----------+
+
+CRITICAL GAPS:
+• Image analysis pipeline - 105 lines untested
+• Description generation - 70 lines untested  
+• Quality metrics - 77 lines untested
+• Error handling - 88 lines untested
+• Advanced features - 180+ lines untested
+
+REASON: Integration tests skipped (require active API keys)
+
+SOLUTION: Implement unit tests with mocked API responses
+Expected improvement: 32% -> 65%+ coverage in 1 week
+
+FILES GENERATED:
+✓ htmlcov/index.html (interactive coverage report)
+✓ COVERAGE_REPORT_AI_MODULES.md (detailed analysis)
+✓ AI_COVERAGE_SUMMARY.txt (executive summary)
+
+NEXT STEPS:
+1. Review AI_COVERAGE_SUMMARY.txt for action items
+2. Open htmlcov/index.html to identify specific lines
+3. Create mock tests for critical modules
+4. Target 70%+ coverage within 2 weeks

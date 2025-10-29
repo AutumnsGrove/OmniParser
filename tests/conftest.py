@@ -2,8 +2,11 @@
 
 import pytest
 import tempfile
+import os
+import logging
 from pathlib import Path
 from datetime import datetime
+from typing import Dict, Optional
 from src.omniparser.models import (
     ImageReference,
     Chapter,
@@ -11,6 +14,8 @@ from src.omniparser.models import (
     ProcessingInfo,
     Document,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -115,3 +120,155 @@ def temp_json_file():
     # Cleanup
     if temp_path.exists():
         temp_path.unlink()
+
+
+# AI Provider Configuration Fixtures
+
+
+def check_lmstudio_available() -> bool:
+    """Check if LM Studio server is available."""
+    import socket
+    try:
+        # Quick connection test to LM Studio default port
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)
+        result = sock.connect_ex(('localhost', 1234))
+        sock.close()
+        return result == 0
+    except Exception:
+        return False
+
+
+def check_anthropic_available() -> bool:
+    """Check if Anthropic API key is available."""
+    # Check environment variable
+    if os.getenv("ANTHROPIC_API_KEY"):
+        return True
+
+    # Check secrets.json
+    try:
+        import json
+        from pathlib import Path
+        secrets_path = Path(__file__).parent.parent / "secrets.json"
+        if secrets_path.exists():
+            with open(secrets_path) as f:
+                secrets = json.load(f)
+                return bool(secrets.get("anthropic_api_key"))
+    except Exception:
+        pass
+
+    return False
+
+
+@pytest.fixture
+def lmstudio_options() -> Dict[str, str]:
+    """LM Studio AI configuration options."""
+    return {
+        "ai_provider": "lmstudio",
+        "ai_model": "google/gemma-3n-e4b",
+        "base_url": "http://localhost:1234/v1",
+    }
+
+
+@pytest.fixture
+def anthropic_options() -> Dict[str, str]:
+    """Anthropic AI configuration options."""
+    return {
+        "ai_provider": "anthropic",
+        "ai_model": "claude-3-haiku-20240307",
+    }
+
+
+@pytest.fixture
+def ai_options_with_fallback(lmstudio_options, anthropic_options) -> Dict[str, str]:
+    """
+    AI configuration with automatic fallback.
+
+    Tries LM Studio first, then Anthropic, then skips test.
+    Logs which provider is being used for transparency.
+    """
+    # Try LM Studio first
+    if check_lmstudio_available():
+        logger.info("✓ Using LM Studio for testing (cost-effective local model)")
+        return lmstudio_options
+
+    logger.warning("✗ LM Studio not available, trying Anthropic fallback...")
+
+    # Fallback to Anthropic
+    if check_anthropic_available():
+        logger.info("✓ Using Anthropic API for testing (fallback)")
+        return anthropic_options
+
+    # Both unavailable - skip test
+    pytest.skip(
+        "No AI provider available. Either start LM Studio on localhost:1234 "
+        "or set ANTHROPIC_API_KEY environment variable."
+    )
+
+
+@pytest.fixture
+def ai_config_with_fallback(ai_options_with_fallback):
+    """
+    AIConfig instance with automatic provider fallback.
+
+    Creates a configured AIConfig that's ready to use in tests.
+    Includes health check to verify the provider actually works.
+    """
+    from src.omniparser.ai_config import AIConfig
+
+    try:
+        config = AIConfig(options=ai_options_with_fallback)
+
+        # Quick health check with simple prompt
+        try:
+            response = config.generate(
+                "Say 'ready' and nothing else.",
+                system="Be concise."
+            )
+            if response and len(response) > 0:
+                logger.info(f"✓ AI provider health check passed: {config.provider.value}")
+                return config
+        except Exception as e:
+            logger.warning(f"✗ Provider health check failed: {e}")
+
+            # If LM Studio failed, try Anthropic
+            if ai_options_with_fallback.get("ai_provider") == "lmstudio":
+                if check_anthropic_available():
+                    logger.info("↻ Retrying with Anthropic fallback...")
+                    anthropic_opts = {
+                        "ai_provider": "anthropic",
+                        "ai_model": "claude-3-haiku-20240307",
+                    }
+                    config = AIConfig(options=anthropic_opts)
+                    config.generate("Say 'ready' and nothing else.", system="Be concise.")
+                    logger.info("✓ Anthropic fallback health check passed")
+                    return config
+
+            raise
+    except Exception as e:
+        pytest.skip(f"AI provider initialization failed: {e}")
+
+
+@pytest.fixture
+def vision_capable_ai_options(ai_options_with_fallback) -> Dict[str, str]:
+    """
+    AI options for vision-capable models.
+
+    LM Studio local models typically don't support vision,
+    so this always uses Anthropic for vision tests.
+    """
+    if ai_options_with_fallback.get("ai_provider") == "lmstudio":
+        logger.info("⚠ Vision test detected - using Anthropic (local models don't support vision)")
+
+        if not check_anthropic_available():
+            pytest.skip(
+                "Vision tests require Anthropic API. "
+                "Set ANTHROPIC_API_KEY to run vision tests."
+            )
+
+        return {
+            "ai_provider": "anthropic",
+            "ai_model": "claude-3-haiku-20240307",
+        }
+
+    return ai_options_with_fallback
