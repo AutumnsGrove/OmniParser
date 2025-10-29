@@ -893,3 +893,346 @@ class TestHTMLParserStringPath:
             assert isinstance(doc, Document)
         finally:
             tmp_path.unlink()
+
+
+class TestHTMLParserImageExtraction:
+    """Test suite for HTML parser image extraction."""
+
+    def test_extract_images_from_html(self, html_parser: HTMLParser) -> None:
+        """Test extracting images from HTML content."""
+        html = """
+        <html><body>
+            <img src="http://example.com/image1.jpg" alt="First image">
+            <img src="http://example.com/image2.png" alt="Second image">
+            <img src="data:image/png;base64,ABC123" alt="Data URI (skip)">
+            <img src="http://example.com/image3.gif" alt="Third image">
+        </body></html>
+        """
+
+        with patch("omniparser.parsers.html_parser.requests.get") as mock_get:
+            # Mock image downloads
+            mock_response = Mock()
+            mock_response.content = b"fake_image_data"
+            mock_response.iter_content = Mock(return_value=[b"fake_image_data"])
+            mock_get.return_value = mock_response
+
+            with patch("omniparser.parsers.html_parser.Image.open") as mock_image:
+                # Mock image dimensions
+                mock_img = Mock()
+                mock_img.size = (800, 600)
+                mock_img.format = "JPEG"
+                mock_image.return_value.__enter__ = Mock(return_value=mock_img)
+                mock_image.return_value.__exit__ = Mock(return_value=None)
+
+                images = html_parser._extract_images(
+                    html, base_url="http://example.com"
+                )
+
+                # Should extract 3 images (skip data URI)
+                assert len(images) == 3
+                assert images[0].image_id == "img_001"
+                assert images[1].image_id == "img_002"
+                assert images[2].image_id == "img_003"
+                assert images[0].alt_text == "First image"
+                assert images[1].alt_text == "Second image"
+                assert images[2].alt_text == "Third image"
+                assert images[0].size == (800, 600)
+                assert images[0].format == "jpeg"
+
+    def test_resolve_image_url_absolute(self, html_parser: HTMLParser) -> None:
+        """Test resolving absolute URLs returns them unchanged."""
+        # HTTP URL
+        http_url = "http://example.com/image.jpg"
+        result = html_parser._resolve_image_url(http_url, base_url="http://other.com")
+        assert result == http_url
+
+        # HTTPS URL
+        https_url = "https://cdn.example.com/photo.png"
+        result = html_parser._resolve_image_url(https_url, base_url="https://other.com")
+        assert result == https_url
+
+    def test_resolve_image_url_relative(self, html_parser: HTMLParser) -> None:
+        """Test resolving relative URLs with base_url."""
+        base_url = "https://example.com/articles/page.html"
+
+        # Root-relative path
+        result = html_parser._resolve_image_url("/images/photo.jpg", base_url)
+        assert result == "https://example.com/images/photo.jpg"
+
+        # Relative path (same directory)
+        result = html_parser._resolve_image_url("photo.png", base_url)
+        assert result == "https://example.com/articles/photo.png"
+
+        # Parent directory path
+        base_url2 = "https://example.com/articles/2024/page.html"
+        result = html_parser._resolve_image_url("../images/pic.jpg", base_url2)
+        assert result == "https://example.com/articles/images/pic.jpg"
+
+    def test_resolve_image_url_protocol_relative(self, html_parser: HTMLParser) -> None:
+        """Test resolving protocol-relative URLs."""
+        protocol_relative = "//cdn.example.com/image.jpg"
+        result = html_parser._resolve_image_url(
+            protocol_relative, base_url="https://example.com"
+        )
+
+        # Should add https: protocol
+        assert result == "https://cdn.example.com/image.jpg"
+
+    def test_resolve_image_url_data_uri(self, html_parser: HTMLParser) -> None:
+        """Test data URIs are returned unchanged."""
+        data_uri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        result = html_parser._resolve_image_url(data_uri, base_url="http://example.com")
+
+        # Data URI should be returned as-is
+        assert result == data_uri
+
+    def test_download_image_success(self, html_parser: HTMLParser) -> None:
+        """Test successful image download."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "test_image.jpg"
+
+            with patch("omniparser.parsers.html_parser.requests.get") as mock_get:
+                # Mock successful download
+                mock_response = Mock()
+                mock_response.content = b"fake_jpeg_data"
+                mock_response.iter_content = Mock(return_value=[b"fake_jpeg_data"])
+                mock_get.return_value = mock_response
+
+                with patch("omniparser.parsers.html_parser.Image.open") as mock_image:
+                    # Mock Pillow image
+                    mock_img = Mock()
+                    mock_img.size = (1920, 1080)
+                    mock_image.return_value.__enter__ = Mock(return_value=mock_img)
+                    mock_image.return_value.__exit__ = Mock(return_value=None)
+
+                    dimensions = html_parser._download_image(
+                        "http://example.com/image.jpg", output_path
+                    )
+
+                    # Verify dimensions returned
+                    assert dimensions == (1920, 1080)
+
+                    # Verify file was written
+                    assert output_path.exists()
+
+                    # Verify requests.get called correctly
+                    mock_get.assert_called_once_with(
+                        "http://example.com/image.jpg", timeout=10, stream=True
+                    )
+
+    def test_download_image_timeout(self, html_parser: HTMLParser) -> None:
+        """Test graceful handling of download timeout."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "timeout_image.jpg"
+
+            with patch("omniparser.parsers.html_parser.requests.get") as mock_get:
+                # Mock timeout
+                mock_get.side_effect = requests.Timeout("Connection timeout")
+
+                dimensions = html_parser._download_image(
+                    "http://slow.example.com/image.jpg", output_path
+                )
+
+                # Should return None on timeout (graceful failure)
+                assert dimensions is None
+
+                # File should not be created
+                assert not output_path.exists()
+
+    def test_download_image_http_error(self, html_parser: HTMLParser) -> None:
+        """Test graceful handling of HTTP errors."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "error_image.jpg"
+
+            with patch("omniparser.parsers.html_parser.requests.get") as mock_get:
+                # Mock HTTP error
+                mock_get.side_effect = requests.HTTPError("404 Not Found")
+
+                dimensions = html_parser._download_image(
+                    "http://example.com/missing.jpg", output_path
+                )
+
+                # Should return None on HTTP error (graceful failure)
+                assert dimensions is None
+
+    def test_get_image_format(self, html_parser: HTMLParser) -> None:
+        """Test image format detection using Pillow."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_file = Path(tmpdir) / "test.jpg"
+
+            # Create a mock file and test format detection
+            with patch("omniparser.parsers.html_parser.Image.open") as mock_image:
+                # Mock JPEG format
+                mock_img = Mock()
+                mock_img.format = "JPEG"
+                mock_image.return_value.__enter__ = Mock(return_value=mock_img)
+                mock_image.return_value.__exit__ = Mock(return_value=None)
+
+                # Create dummy file
+                test_file.write_bytes(b"fake_image_data")
+
+                format_result = html_parser._get_image_format(test_file)
+                assert format_result == "jpeg"
+
+            # Test PNG format
+            test_file2 = Path(tmpdir) / "test.png"
+            with patch("omniparser.parsers.html_parser.Image.open") as mock_image:
+                mock_img = Mock()
+                mock_img.format = "PNG"
+                mock_image.return_value.__enter__ = Mock(return_value=mock_img)
+                mock_image.return_value.__exit__ = Mock(return_value=None)
+
+                test_file2.write_bytes(b"fake_png_data")
+                format_result = html_parser._get_image_format(test_file2)
+                assert format_result == "png"
+
+            # Test invalid file (returns "unknown")
+            invalid_file = Path(tmpdir) / "invalid.txt"
+            invalid_file.write_text("not an image")
+
+            with patch(
+                "omniparser.parsers.html_parser.Image.open",
+                side_effect=Exception("Cannot identify image file"),
+            ):
+                format_result = html_parser._get_image_format(invalid_file)
+                assert format_result == "unknown"
+
+    def test_parse_with_images_enabled(self, html_parser: HTMLParser) -> None:
+        """Test parsing HTML with image extraction enabled."""
+        html = """
+        <html>
+        <head><title>Article with Images</title></head>
+        <body>
+            <article>
+                <h1>Test Article</h1>
+                <p>This article has images.</p>
+                <img src="http://example.com/photo1.jpg" alt="Photo 1">
+                <p>Some more text.</p>
+                <img src="http://example.com/photo2.png" alt="Photo 2">
+            </article>
+        </body>
+        </html>
+        """
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".html", delete=False, encoding="utf-8"
+        ) as tmp:
+            tmp.write(html)
+            tmp_path = Path(tmp.name)
+
+        try:
+            with patch("omniparser.parsers.html_parser.requests.get") as mock_get:
+                mock_response = Mock()
+                mock_response.content = b"fake_image"
+                mock_response.iter_content = Mock(return_value=[b"fake_image"])
+                mock_get.return_value = mock_response
+
+                with patch("omniparser.parsers.html_parser.Image.open") as mock_image:
+                    mock_img = Mock()
+                    mock_img.size = (640, 480)
+                    mock_img.format = "JPEG"
+                    mock_image.return_value.__enter__ = Mock(return_value=mock_img)
+                    mock_image.return_value.__exit__ = Mock(return_value=None)
+
+                    # Parse with images enabled (default)
+                    doc = html_parser.parse(tmp_path)
+
+                    # Should have extracted images
+                    assert len(doc.images) == 2
+                    assert doc.images[0].alt_text == "Photo 1"
+                    assert doc.images[1].alt_text == "Photo 2"
+                    assert doc.images[0].size == (640, 480)
+        finally:
+            tmp_path.unlink()
+
+    def test_parse_with_images_disabled(self, html_parser: HTMLParser) -> None:
+        """Test parsing HTML with image extraction disabled."""
+        html = """
+        <html>
+        <head><title>Article with Images</title></head>
+        <body>
+            <article>
+                <h1>Test Article</h1>
+                <img src="http://example.com/photo.jpg" alt="A photo">
+                <p>Some content here.</p>
+            </article>
+        </body>
+        </html>
+        """
+
+        # Create parser with images disabled
+        parser = HTMLParser({"extract_images": False})
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".html", delete=False, encoding="utf-8"
+        ) as tmp:
+            tmp.write(html)
+            tmp_path = Path(tmp.name)
+
+        try:
+            doc = parser.parse(tmp_path)
+
+            # Should not have extracted any images
+            assert len(doc.images) == 0
+        finally:
+            tmp_path.unlink()
+
+    def test_parse_with_persistent_image_dir(self, html_parser: HTMLParser) -> None:
+        """Test parsing with custom persistent image output directory."""
+        html = """
+        <html>
+        <head><title>Article</title></head>
+        <body>
+            <article>
+                <h1>Test</h1>
+                <img src="http://example.com/image1.jpg" alt="Image 1">
+                <img src="http://example.com/image2.png" alt="Image 2">
+            </article>
+        </body>
+        </html>
+        """
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Set custom image output directory
+            custom_image_dir = Path(tmpdir) / "my_images"
+            parser = HTMLParser({"image_output_dir": str(custom_image_dir)})
+
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".html", delete=False, encoding="utf-8"
+            ) as tmp:
+                tmp.write(html)
+                tmp_path = Path(tmp.name)
+
+            try:
+                with patch("omniparser.parsers.html_parser.requests.get") as mock_get:
+                    mock_response = Mock()
+                    mock_response.content = b"fake_image"
+                    mock_response.iter_content = Mock(return_value=[b"fake_image"])
+                    mock_get.return_value = mock_response
+
+                    with patch(
+                        "omniparser.parsers.html_parser.Image.open"
+                    ) as mock_image:
+                        mock_img = Mock()
+                        mock_img.size = (800, 600)
+                        mock_img.format = "JPEG"
+                        mock_image.return_value.__enter__ = Mock(return_value=mock_img)
+                        mock_image.return_value.__exit__ = Mock(return_value=None)
+
+                        doc = parser.parse(tmp_path)
+
+                        # Verify directory was created
+                        assert custom_image_dir.exists()
+                        assert custom_image_dir.is_dir()
+
+                        # Verify images were saved to custom directory
+                        assert len(doc.images) == 2
+
+                        # Check that image file paths point to custom directory
+                        for image_ref in doc.images:
+                            image_path = Path(image_ref.file_path)
+                            assert image_path.parent == custom_image_dir
+                            assert image_path.exists()
+
+            finally:
+                tmp_path.unlink()
