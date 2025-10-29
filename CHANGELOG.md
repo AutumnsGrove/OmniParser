@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- Update CHANGELOG.md
+- Consolidate CHANGELOG with 9 duplicate sections from merges
+- Update README to reflect 6 parsers and AI features (Phase 2.8)
+- Update CLAUDE.md project overview to Phase 2.8
+- Update NEXT_STEPS.md with Phase 2.8 completion and future roadmap
+- Update TODOS.md to reflect Phase 2.8 completion
+- Document DOCX parser beta status and limitations
+- Add comprehensive parser refactoring plan (Phase 3.0)
+- Add CHANGELOG management strategy to prevent future corruption
+- Add cleanup completion report (Phase 2.9)
+
+### Refactored
+
+- Extract shared metadata building logic to processor
+- Extract shared image extraction logic to processor module
+
+### Styling
+
+- Standardize import organization across all parsers
+- Add missing type hints across AI and utility modules
+
+### Miscellaneous Tasks
+
+- Bump version to 0.3.0 for release
+
+## [Unreleased]
+
 ## [0.3.0] - 2025-10-29
 
 ### Added
