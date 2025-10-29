@@ -141,25 +141,41 @@ class TestParseDocument:
         ):
             parse_document(test_file)
 
-    def test_parse_document_unsupported_html(self, tmp_path):
-        """Test that HTML files raise UnsupportedFormatError."""
+    def test_parse_document_html_format(self, tmp_path):
+        """Test that HTML files are routed to HTMLParser."""
         test_file = tmp_path / "test.html"
-        test_file.write_text("dummy content")
+        test_file.write_text("<html><body><h1>Test</h1></body></html>")
 
-        with pytest.raises(
-            UnsupportedFormatError, match="HTML format not yet implemented"
-        ):
-            parse_document(test_file)
+        with patch("omniparser.parser.HTMLParser") as MockParser:
+            mock_parser_instance = Mock()
+            mock_doc = Mock(spec=Document)
+            mock_parser_instance.parse.return_value = mock_doc
+            MockParser.return_value = mock_parser_instance
 
-    def test_parse_document_unsupported_htm(self, tmp_path):
-        """Test that HTM files raise UnsupportedFormatError."""
+            result = parse_document(test_file)
+
+            # Verify HTMLParser was instantiated and used
+            MockParser.assert_called_once_with(None)
+            mock_parser_instance.parse.assert_called_once()
+            assert result == mock_doc
+
+    def test_parse_document_htm_format(self, tmp_path):
+        """Test that HTM files are routed to HTMLParser."""
         test_file = tmp_path / "test.htm"
-        test_file.write_text("dummy content")
+        test_file.write_text("<html><body><h1>Test</h1></body></html>")
 
-        with pytest.raises(
-            UnsupportedFormatError, match="HTML format not yet implemented"
-        ):
-            parse_document(test_file)
+        with patch("omniparser.parser.HTMLParser") as MockParser:
+            mock_parser_instance = Mock()
+            mock_doc = Mock(spec=Document)
+            mock_parser_instance.parse.return_value = mock_doc
+            MockParser.return_value = mock_parser_instance
+
+            result = parse_document(test_file)
+
+            # Verify HTMLParser was instantiated and used
+            MockParser.assert_called_once_with(None)
+            mock_parser_instance.parse.assert_called_once()
+            assert result == mock_doc
 
     def test_parse_document_unsupported_markdown(self, tmp_path):
         """Test that Markdown files raise UnsupportedFormatError."""
@@ -222,10 +238,10 @@ class TestGetSupportedFormats:
         formats = get_supported_formats()
         assert ".epub" in formats
 
-    def test_get_supported_formats_only_epub_for_now(self):
-        """Test that only EPUB is supported currently."""
+    def test_get_supported_formats_includes_html(self):
+        """Test that EPUB and HTML formats are supported currently."""
         formats = get_supported_formats()
-        assert formats == [".epub"]
+        assert formats == [".epub", ".html", ".htm"]
 
 
 class TestIsFormatSupported:
@@ -251,11 +267,12 @@ class TestIsFormatSupported:
         """Test is_format_supported with various formats."""
         # Supported
         assert is_format_supported("book.epub") is True
+        assert is_format_supported("page.html") is True
+        assert is_format_supported("page.htm") is True
 
         # Unsupported (but planned)
         assert is_format_supported("doc.pdf") is False
         assert is_format_supported("doc.docx") is False
-        assert is_format_supported("page.html") is False
         assert is_format_supported("readme.md") is False
         assert is_format_supported("notes.txt") is False
 

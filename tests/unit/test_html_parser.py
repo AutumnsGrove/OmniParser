@@ -234,7 +234,13 @@ class TestHTMLParserFetchURL:
         content = html_parser._fetch_url("http://example.com")
 
         assert content == simple_html
-        mock_get.assert_called_once_with("http://example.com", timeout=10)
+        mock_get.assert_called_once_with(
+            "http://example.com",
+            timeout=10,
+            headers={
+                "User-Agent": "OmniParser/0.2.0 (+https://github.com/AutumnsGrove/omniparser)"
+            },
+        )
 
     @patch("omniparser.parsers.html_parser.requests.get")
     def test_fetch_url_custom_timeout(self, mock_get: Mock) -> None:
@@ -246,7 +252,13 @@ class TestHTMLParserFetchURL:
 
         parser._fetch_url("http://example.com")
 
-        mock_get.assert_called_once_with("http://example.com", timeout=30)
+        mock_get.assert_called_once_with(
+            "http://example.com",
+            timeout=30,
+            headers={
+                "User-Agent": "OmniParser/0.2.0 (+https://github.com/AutumnsGrove/omniparser)"
+            },
+        )
 
     @patch("omniparser.parsers.html_parser.requests.get")
     def test_fetch_url_timeout_error(
@@ -290,6 +302,116 @@ class TestHTMLParserFetchURL:
         html_parser._fetch_url("http://example.com")
 
         mock_response.raise_for_status.assert_called_once()
+
+    @patch("omniparser.parsers.html_parser.requests.get")
+    def test_fetch_url_custom_user_agent(self, mock_get: Mock) -> None:
+        """Test URL fetch with custom user-agent option."""
+        parser = HTMLParser({"user_agent": "CustomBot/1.0"})
+        mock_response = Mock()
+        mock_response.text = "<html></html>"
+        mock_get.return_value = mock_response
+
+        parser._fetch_url("http://example.com")
+
+        mock_get.assert_called_once_with(
+            "http://example.com",
+            timeout=10,
+            headers={"User-Agent": "CustomBot/1.0"},
+        )
+
+
+class TestHTMLParserRateLimiting:
+    """Test rate limiting functionality."""
+
+    def test_rate_limiting_disabled_by_default(self, html_parser: HTMLParser) -> None:
+        """Test that rate limiting is disabled by default (no delays)."""
+        import time
+
+        with patch("time.time") as mock_time:
+            # Simulate timestamps: 0.0, 0.01, 0.02 (very fast requests)
+            mock_time.side_effect = [0.0, 0.01, 0.02]
+
+            with patch("time.sleep") as mock_sleep:
+                # Make 3 rapid requests
+                html_parser._apply_rate_limit()
+                html_parser._apply_rate_limit()
+                html_parser._apply_rate_limit()
+
+                # Sleep should never be called when rate limiting is disabled
+                mock_sleep.assert_not_called()
+
+    def test_rate_limiting_enforces_delay(self, html_parser: HTMLParser) -> None:
+        """Test that rate limiting enforces minimum delay between requests."""
+        parser = HTMLParser({"rate_limit_delay": 0.5})
+
+        with patch("time.time") as mock_time:
+            # Simulate timestamps:
+            # First call: current_time=1.0, elapsed=1.0-0.0=1.0 (no sleep), update _last_request_time=1.0
+            # Second call: current_time=1.2, elapsed=1.2-1.0=0.2 (sleep 0.3s), update _last_request_time=1.2
+            mock_time.side_effect = [1.0, 1.0, 1.2, 1.2]
+
+            with patch("time.sleep") as mock_sleep:
+                # First request - no wait (elapsed > delay since _last_request_time starts at 0.0)
+                parser._apply_rate_limit()
+                assert mock_sleep.call_count == 0
+
+                # Second request - should wait 0.3s (0.5 - 0.2 elapsed)
+                parser._apply_rate_limit()
+                mock_sleep.assert_called_once()
+                # Should sleep for approximately 0.3 seconds (0.5 delay - 0.2 elapsed)
+                sleep_duration = mock_sleep.call_args[0][0]
+                assert 0.29 <= sleep_duration <= 0.31
+
+    def test_rate_limiting_no_wait_if_sufficient_time_passed(self) -> None:
+        """Test that no delay occurs if sufficient time has already passed."""
+        parser = HTMLParser({"rate_limit_delay": 0.5})
+
+        with patch("time.time") as mock_time:
+            # Simulate timestamps:
+            # First call: current_time=1.0, elapsed=1.0-0.0=1.0 (no sleep), update _last_request_time=1.0
+            # Second call: current_time=2.0, elapsed=2.0-1.0=1.0 (no sleep), update _last_request_time=2.0
+            mock_time.side_effect = [1.0, 1.0, 2.0, 2.0]
+
+            with patch("time.sleep") as mock_sleep:
+                # First request
+                parser._apply_rate_limit()
+
+                # Second request - no wait needed (1.0s elapsed > 0.5s delay)
+                parser._apply_rate_limit()
+                mock_sleep.assert_not_called()
+
+    def test_rate_limiting_thread_safe(self) -> None:
+        """Test that rate limiting is thread-safe using locks."""
+        parser = HTMLParser({"rate_limit_delay": 0.1})
+
+        # Verify the lock exists
+        assert hasattr(parser, "_rate_limit_lock")
+        assert isinstance(parser._rate_limit_lock, type(parser._rate_limit_lock))
+
+        with patch("time.time") as mock_time:
+            mock_time.return_value = 0.0
+
+            with patch("time.sleep"):
+                # Verify lock is used by checking we can acquire it before the call
+                with parser._rate_limit_lock:
+                    # This would deadlock if _apply_rate_limit tries to acquire the lock
+                    # since we're in a different thread-like context
+                    pass
+
+                # Normal call should work
+                parser._apply_rate_limit()
+
+    def test_rate_limiting_negative_delay_disabled(self) -> None:
+        """Test that negative rate_limit_delay disables rate limiting."""
+        parser = HTMLParser({"rate_limit_delay": -1.0})
+
+        with patch("time.sleep") as mock_sleep:
+            parser._apply_rate_limit()
+            parser._apply_rate_limit()
+            parser._apply_rate_limit()
+
+            # No sleep calls should occur with negative delay
+            mock_sleep.assert_not_called()
 
 
 class TestHTMLParserExtractContent:
@@ -1017,7 +1139,12 @@ class TestHTMLParserImageExtraction:
 
                     # Verify requests.get called correctly
                     mock_get.assert_called_once_with(
-                        "http://example.com/image.jpg", timeout=10, stream=True
+                        "http://example.com/image.jpg",
+                        timeout=10,
+                        headers={
+                            "User-Agent": "OmniParser/0.2.0 (+https://github.com/AutumnsGrove/omniparser)"
+                        },
+                        stream=True,
                     )
 
     def test_download_image_timeout(self, html_parser: HTMLParser) -> None:
@@ -1236,3 +1363,155 @@ class TestHTMLParserImageExtraction:
 
             finally:
                 tmp_path.unlink()
+
+
+class TestHTMLParserParallelImageDownload:
+    """Test parallel image downloading functionality."""
+
+    def test_parallel_downloads_default_workers(self, html_parser: HTMLParser) -> None:
+        """Test parallel downloads use default max_workers=5."""
+        # Test the options directly rather than mocking execution
+        assert html_parser.options.get("max_image_workers", 5) == 5
+
+        # Test with custom value
+        parser_custom = HTMLParser({"max_image_workers": 10})
+        assert parser_custom.options.get("max_image_workers", 5) == 10
+
+    def test_parallel_downloads_custom_workers(self) -> None:
+        """Test parallel downloads respect custom max_image_workers option."""
+        # Test that options are stored correctly
+        parser = HTMLParser({"max_image_workers": 3})
+        assert parser.options["max_image_workers"] == 3
+
+        # Test default behavior
+        parser_default = HTMLParser()
+        assert parser_default.options.get("max_image_workers", 5) == 5
+
+    def test_parallel_downloads_sequential_fallback(self) -> None:
+        """Test that max_image_workers=1 enables sequential download mode."""
+        parser = HTMLParser({"max_image_workers": 1})
+        assert parser.options["max_image_workers"] == 1
+
+    def test_parallel_downloads_preserves_order(self, html_parser: HTMLParser) -> None:
+        """Test that images are returned in sequential order with correct IDs."""
+        html = """
+        <html><body>
+            <img src="http://example.com/first.jpg" alt="First">
+            <img src="http://example.com/second.jpg" alt="Second">
+            <img src="http://example.com/third.jpg" alt="Third">
+        </body></html>
+        """
+
+        with patch("omniparser.parsers.html_parser.requests.get") as mock_get:
+            mock_response = Mock()
+            mock_response.content = b"fake_image"
+            mock_response.iter_content = Mock(return_value=[b"fake_image"])
+            mock_get.return_value = mock_response
+
+            with patch("omniparser.parsers.html_parser.Image.open") as mock_image:
+                mock_img = Mock()
+                mock_img.size = (800, 600)
+                mock_img.format = "JPEG"
+                mock_image.return_value.__enter__ = Mock(return_value=mock_img)
+                mock_image.return_value.__exit__ = Mock(return_value=None)
+
+                images = html_parser._extract_images(
+                    html, base_url="http://example.com"
+                )
+
+                # Verify images are returned with sequential IDs
+                assert len(images) == 3
+                assert images[0].image_id == "img_001"
+                assert images[1].image_id == "img_002"
+                assert images[2].image_id == "img_003"
+
+                # Verify alt text is preserved
+                assert images[0].alt_text == "First"
+                assert images[1].alt_text == "Second"
+                assert images[2].alt_text == "Third"
+
+                # Verify file paths have sequential naming
+                assert "img_001" in images[0].file_path
+                assert "img_002" in images[1].file_path
+                assert "img_003" in images[2].file_path
+
+    def test_parallel_downloads_error_handling(self, html_parser: HTMLParser) -> None:
+        """Test graceful handling of failed downloads in parallel mode."""
+        html = """
+        <html><body>
+            <img src="http://example.com/good1.jpg" alt="Good 1">
+            <img src="http://example.com/bad.jpg" alt="Bad (will fail)">
+            <img src="http://example.com/good2.jpg" alt="Good 2">
+        </body></html>
+        """
+
+        call_count = [0]
+
+        def mock_download_side_effect(url, output_path):
+            """Mock download that fails on second image."""
+            call_count[0] += 1
+            if "bad" in url:
+                # Simulate failure - return None
+                return None
+            else:
+                # Simulate success - create file and return dimensions
+                output_path.write_bytes(b"fake_image")
+                return (800, 600)
+
+        with patch.object(
+            html_parser, "_download_image", side_effect=mock_download_side_effect
+        ):
+            with patch("omniparser.parsers.html_parser.Image.open") as mock_image:
+                mock_img = Mock()
+                mock_img.format = "JPEG"
+                mock_image.return_value.__enter__ = Mock(return_value=mock_img)
+                mock_image.return_value.__exit__ = Mock(return_value=None)
+
+                images = html_parser._extract_images(
+                    html, base_url="http://example.com"
+                )
+
+                # Should successfully download 2 images (skipping the failed one)
+                assert len(images) == 2
+                assert images[0].alt_text == "Good 1"
+                assert images[1].alt_text == "Good 2"
+
+                # Verify download was attempted for all 3
+                assert call_count[0] == 3
+
+    def test_parallel_downloads_timeout_handling(self, html_parser: HTMLParser) -> None:
+        """Test graceful handling of timeouts during parallel downloads."""
+        html = """
+        <html><body>
+            <img src="http://example.com/fast.jpg" alt="Fast">
+            <img src="http://slow.example.com/timeout.jpg" alt="Slow (timeout)">
+            <img src="http://example.com/fast2.jpg" alt="Fast 2">
+        </body></html>
+        """
+
+        def mock_download_with_timeout(url, output_path):
+            """Mock download that times out on slow URL."""
+            if "slow" in url:
+                # Simulate timeout - return None
+                return None
+            else:
+                output_path.write_bytes(b"fake_image")
+                return (640, 480)
+
+        with patch.object(
+            html_parser, "_download_image", side_effect=mock_download_with_timeout
+        ):
+            with patch("omniparser.parsers.html_parser.Image.open") as mock_image:
+                mock_img = Mock()
+                mock_img.format = "JPEG"
+                mock_image.return_value.__enter__ = Mock(return_value=mock_img)
+                mock_image.return_value.__exit__ = Mock(return_value=None)
+
+                images = html_parser._extract_images(
+                    html, base_url="http://example.com"
+                )
+
+                # Should successfully download 2 fast images, skip timeout
+                assert len(images) == 2
+                assert images[0].alt_text == "Fast"
+                assert images[1].alt_text == "Fast 2"

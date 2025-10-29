@@ -10,11 +10,13 @@ Classes:
 
 import logging
 import tempfile
+import threading
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -54,6 +56,23 @@ class HTMLParser(BaseParser):
         >>> doc = parser.parse("https://example.com/article")
         >>> print(doc.content[:100])
     """
+
+    def __init__(self, options: Optional[Dict[str, Any]] = None):
+        """
+        Initialize HTMLParser with rate limiting support.
+
+        Args:
+            options: Parser configuration dict including:
+                - rate_limit_delay: Minimum seconds between requests (default: 0.0)
+                - timeout: Request timeout in seconds (default: 10)
+                - extract_images: Whether to extract images (default: True)
+                - detect_chapters: Whether to detect chapters (default: True)
+                - user_agent: Custom User-Agent string
+                - max_image_workers: Max concurrent image downloads (default: 5)
+        """
+        super().__init__(options)
+        self._last_request_time: float = 0.0
+        self._rate_limit_lock = threading.Lock()
 
     def parse(self, file_path: Union[Path, str]) -> Document:
         """
@@ -143,6 +162,50 @@ class HTMLParser(BaseParser):
         path_obj = Path(file_path_str)
         return path_obj.suffix.lower() in [".html", ".htm"]
 
+    def _build_headers(self) -> Dict[str, str]:
+        """
+        Build HTTP headers for requests.
+
+        Returns:
+            Dictionary of HTTP headers including User-Agent.
+        """
+        user_agent = self.options.get(
+            "user_agent",
+            "OmniParser/0.2.0 (+https://github.com/AutumnsGrove/omniparser)",
+        )
+        return {"User-Agent": user_agent}
+
+    def _apply_rate_limit(self) -> None:
+        """
+        Apply rate limiting by enforcing minimum delay between requests.
+
+        Thread-safe implementation using a lock to coordinate across parallel downloads.
+        Respects the 'rate_limit_delay' option (default: 0.0 = no rate limiting).
+
+        The method uses a lock to ensure thread safety when multiple images are being
+        downloaded in parallel. It calculates the elapsed time since the last request
+        and sleeps if necessary to enforce the minimum delay.
+
+        Example:
+            >>> parser = HTMLParser(rate_limit_delay=1.0)
+            >>> parser._apply_rate_limit()  # First call returns immediately
+            >>> parser._apply_rate_limit()  # Second call waits ~1 second
+        """
+        rate_limit_delay = self.options.get("rate_limit_delay", 0.0)
+
+        if rate_limit_delay <= 0:
+            return
+
+        with self._rate_limit_lock:
+            current_time = time.time()
+            elapsed = current_time - self._last_request_time
+
+            if elapsed < rate_limit_delay:
+                sleep_time = rate_limit_delay - elapsed
+                time.sleep(sleep_time)
+
+            self._last_request_time = time.time()
+
     def _fetch_url(self, url: str) -> str:
         """
         Fetch HTML content from URL.
@@ -156,10 +219,12 @@ class HTMLParser(BaseParser):
         Raises:
             NetworkError: If fetch fails or times out.
         """
+        self._apply_rate_limit()
         timeout = self.options.get("timeout", 10)
+        headers = self._build_headers()
 
         try:
-            response = requests.get(url, timeout=timeout)
+            response = requests.get(url, timeout=timeout, headers=headers)
             response.raise_for_status()
             return cast(str, response.text)
         except requests.exceptions.Timeout as e:
@@ -316,16 +381,17 @@ class HTMLParser(BaseParser):
         self, html: str, base_url: Optional[str] = None
     ) -> List[ImageReference]:
         """
-        Extract images from HTML content.
+        Extract images from HTML content with parallel downloads.
 
         Features:
         - Find all <img> tags using BeautifulSoup
-        - Download images from URLs (if base_url provided)
+        - Download images from URLs in parallel using ThreadPoolExecutor
         - Handle relative image paths
         - Extract alt text
         - Get image dimensions (if possible)
         - Save to image_output_dir or temp directory
         - Generate sequential image IDs (img_001, img_002, etc.)
+        - Thread-safe with rate limiting support
 
         Args:
             html: HTML content to extract images from.
@@ -364,8 +430,8 @@ class HTMLParser(BaseParser):
             cleanup_temp = True
             logger.info(f"Saving images to temporary directory: {output_dir}")
 
-        # Extract each image
-        img_counter = 0  # Counter for successfully extracted images
+        # Build list of download tasks (pre-process all img tags)
+        download_tasks = []
         for idx, img_tag in enumerate(img_tags, start=1):
             try:
                 # Get image source
@@ -387,6 +453,13 @@ class HTMLParser(BaseParser):
                 # Resolve image URL
                 image_url = self._resolve_image_url(img_src, base_url)
 
+                # Skip non-absolute URLs (local/relative paths)
+                if not image_url.startswith(("http://", "https://")):
+                    logger.debug(
+                        f"Image {idx} is local/relative reference, skipping: {img_src}"
+                    )
+                    continue
+
                 # Determine file extension from URL
                 parsed_url = urlparse(image_url)
                 path_parts = parsed_url.path.split(".")
@@ -396,55 +469,85 @@ class HTMLParser(BaseParser):
                 if extension not in ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"]:
                     extension = "jpg"
 
-                # Increment counter for this successfully processed image
-                img_counter += 1
-
-                # Generate output filename
-                output_filename = f"img_{img_counter:03d}.{extension}"
-                output_path = output_dir / output_filename
-
-                # Download image if it's an absolute URL
-                dimensions = None
-                if image_url.startswith(("http://", "https://")):
-                    # Download from URL (works for both URL sources and local files with absolute URLs)
-                    dimensions = self._download_image(image_url, output_path)
-                    if dimensions is None:
-                        logger.warning(f"Failed to download image {img_counter}: {image_url}")
-                        img_counter -= 1  # Decrement counter on failure
-                        continue
-                else:
-                    # Local/relative path - skip for now
-                    # Would need original HTML file path to resolve relative paths properly
-                    logger.debug(f"Image {idx} is local/relative reference, skipping: {img_src}")
-                    img_counter -= 1  # Decrement counter since we're skipping
-                    continue
-
-                # Get image format
-                img_format = self._get_image_format(output_path)
-
                 # Extract alt text (cast to string)
                 alt_text_raw = img_tag.get("alt")
                 alt_text = str(alt_text_raw) if alt_text_raw else None
 
-                # Create ImageReference
-                image_ref = ImageReference(
-                    image_id=f"img_{img_counter:03d}",
-                    position=img_counter * 100,  # Simple sequential spacing
-                    file_path=str(output_path),
-                    alt_text=alt_text,
-                    size=dimensions,
-                    format=img_format,
-                )
-
-                images.append(image_ref)
-                logger.debug(
-                    f"Extracted image {img_counter}: {output_filename} "
-                    f"({img_format}, {dimensions})"
-                )
+                # Add to download tasks
+                download_tasks.append((image_url, extension, alt_text, idx))
 
             except Exception as e:
-                logger.warning(f"Failed to extract image {idx}: {e}")
-                # Continue with next image
+                logger.warning(f"Failed to process image {idx} metadata: {e}")
+                continue
+
+        if not download_tasks:
+            logger.info("No downloadable images found")
+            return images
+
+        # Parallel download using ThreadPoolExecutor
+        max_workers = self.options.get("max_image_workers", 5)
+        logger.info(
+            f"Downloading {len(download_tasks)} images with {max_workers} workers"
+        )
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all download tasks
+            future_to_task = {}
+            for task_idx, (image_url, extension, alt_text, original_idx) in enumerate(
+                download_tasks, start=1
+            ):
+                # Generate output filename with sequential numbering
+                output_filename = f"img_{task_idx:03d}.{extension}"
+                output_path = output_dir / output_filename
+
+                # Submit download task
+                future = executor.submit(self._download_image, image_url, output_path)
+                future_to_task[future] = (
+                    task_idx,
+                    output_path,
+                    alt_text,
+                    original_idx,
+                    image_url,
+                )
+
+            # Collect results as they complete
+            for future in as_completed(future_to_task):
+                task_idx, output_path, alt_text, original_idx, image_url = (
+                    future_to_task[future]
+                )
+                try:
+                    dimensions = future.result()
+                    if dimensions is None:
+                        logger.warning(
+                            f"Failed to download image {task_idx}: {image_url}"
+                        )
+                        continue
+
+                    # Get image format
+                    img_format = self._get_image_format(output_path)
+
+                    # Create ImageReference
+                    image_ref = ImageReference(
+                        image_id=f"img_{task_idx:03d}",
+                        position=task_idx * 100,  # Simple sequential spacing
+                        file_path=str(output_path),
+                        alt_text=alt_text,
+                        size=dimensions,
+                        format=img_format,
+                    )
+
+                    images.append(image_ref)
+                    logger.debug(
+                        f"Extracted image {task_idx}: {output_path.name} "
+                        f"({img_format}, {dimensions})"
+                    )
+
+                except Exception as e:
+                    logger.warning(f"Failed to process image {task_idx}: {e}")
+                    continue
+
+        # Sort images by image_id to ensure consistent ordering
+        images.sort(key=lambda img: img.image_id)
 
         logger.info(f"Successfully extracted {len(images)} images")
         return images
@@ -518,11 +621,15 @@ class HTMLParser(BaseParser):
             >>> if dims:
             ...     print(f"Image dimensions: {dims[0]}x{dims[1]}")
         """
+        self._apply_rate_limit()
         timeout = self.options.get("timeout", 10)
+        headers = self._build_headers()
 
         try:
             # Download image
-            response = requests.get(image_url, timeout=timeout, stream=True)
+            response = requests.get(
+                image_url, timeout=timeout, headers=headers, stream=True
+            )
             response.raise_for_status()
 
             # Save to file
