@@ -176,6 +176,10 @@ The project follows [semver](https://semver.org/):
 
 ### Version Bumping
 
+**IMPORTANT: You MUST create git tags for releases!**
+
+Git-cliff relies on git tags to identify versions. Without tags, all commits appear as "Unreleased" and the workflow may overwrite manually-written changelog content.
+
 **Manual Versioning:**
 
 1. Update `pyproject.toml`:
@@ -184,18 +188,27 @@ The project follows [semver](https://semver.org/):
    version = "0.2.0"
    ```
 
-2. Generate changelog:
+2. Commit and tag (create tag BEFORE pushing):
    ```bash
-   git-cliff --tag v0.2.0 --output CHANGELOG.md
+   git add pyproject.toml
+   git commit -m "chore: Bump version to 0.2.0"
+   git tag -a v0.2.0 -m "Release v0.2.0: Brief description"
    ```
 
-3. Commit and tag:
+3. Generate changelog locally to preview:
    ```bash
-   git add pyproject.toml CHANGELOG.md
-   git commit -m "chore: Bump version to 0.2.0"
-   git tag v0.2.0
+   git-cliff --unreleased --prepend CHANGELOG.md
+   ```
+
+4. Push with tags:
+   ```bash
    git push origin main --tags
    ```
+
+**The workflow uses `--unreleased --prepend` mode**, which:
+- Only adds commits since the last tag to the changelog
+- Prepends new content to the top (preserves existing content)
+- Never regenerates the entire changelog from scratch
 
 **Automated Versioning (Future Enhancement):**
 
@@ -230,6 +243,36 @@ git-cliff --verbose
 # Check if specific commit is parsed
 git log --oneline | grep "<commit-message>"
 ```
+
+### Changelog Content Was Overwritten
+
+**Problem:** Git-cliff replaced detailed manual changelog content with auto-generated entries.
+
+**Cause:** No git tags exist, so git-cliff regenerates the entire changelog treating all commits as "Unreleased".
+
+**Solution:**
+1. **Restore the original changelog:**
+   ```bash
+   git revert <bad-commit-hash>
+   ```
+
+2. **Create git tags for past releases:**
+   ```bash
+   # Find the commit where v0.1.0 was completed
+   git log --oneline --grep="v0.1.0"
+
+   # Create the tag at that commit
+   git tag -a v0.1.0 <commit-hash> -m "Release v0.1.0"
+   ```
+
+3. **Ensure workflow uses `--unreleased --prepend` mode** (already configured)
+
+4. **Push tags:**
+   ```bash
+   git push origin --tags
+   ```
+
+**Prevention:** Always create git tags when releasing a version!
 
 ### Duplicate Entries
 
