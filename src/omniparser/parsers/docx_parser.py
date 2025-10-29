@@ -55,9 +55,22 @@ class DOCXParser(BaseParser):
     - Table extraction and markdown conversion
     - Metadata from document properties
 
-    Not Yet Implemented (TODO for future versions):
+    **Beta Status - Core Features Complete**
+
+    Currently implemented:
+    - Text extraction from paragraphs
+    - Basic table extraction
+    - Image extraction (embedded images)
+    - Basic formatting (bold, italic, underline)
+    - Metadata extraction
+
+    Not yet implemented (TODO for future versions):
     - List conversion (bullets and numbered lists)
-    - Hyperlink extraction and conversion
+    - Hyperlink extraction and conversion to markdown
+    - Complex table structures with merged cells
+    - Advanced formatting (styles, colors, fonts)
+    - Footnotes and endnotes
+    - Comments and track changes
 
     Options:
         extract_images (bool): Extract embedded images. Default: True
