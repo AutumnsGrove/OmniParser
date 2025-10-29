@@ -31,15 +31,9 @@ def parse_document(
     - EPUB (.epub)
     - HTML (.html, .htm) - local files and URLs
     - PDF (.pdf)
-
-    Future support planned for:
     - DOCX (.docx)
-    - DOCX (.docx)
+    - Markdown (.md, .markdown)
     - Text (.txt, or no extension)
-
-    Future support planned for:
-    - PDF (.pdf)
-    - Markdown (.md)
 
     Args:
         file_path: Path to file to parse, or URL string (string or Path object).
@@ -138,9 +132,7 @@ def parse_document(
     else:
         raise UnsupportedFormatError(
             f"Unsupported file format: {file_extension}. "
-            f"Supported formats: .epub, .pdf, .html, .htm (more coming soon)"
-            f"Supported formats: .epub, .html, .htm, .docx (more coming soon)"
-            f"Supported formats: .epub, .html, .htm, .txt (more coming soon)"
+            f"Supported formats: .epub, .pdf, .html, .htm, .docx, .md, .markdown, .txt"
         )
 
 
@@ -148,17 +140,9 @@ def get_supported_formats() -> list[str]:
     """Get list of currently supported file formats.
 
     Returns:
-        List of file extensions (e.g., ['.epub', '.pdf', '.html', '.htm']).
-        List of file extensions (e.g., ['.epub', '.html', '.htm', '.md', '.markdown']).
+        List of file extensions (e.g., ['.epub', '.pdf', '.html', '.htm', '.docx', '.md', '.markdown', '.txt']).
     """
-    return [".epub", ".html", ".htm", ".md", ".markdown"]
-        List of file extensions (e.g., ['.epub', '.html', '.htm', '.docx']).
-    """
-    return [".epub", ".html", ".htm", ".docx"]
-        List of file extensions (e.g., ['.epub', '.html', '.htm', '.txt']).
-    """
-    return [".epub", ".pdf", ".html", ".htm"]
-
+    return [".epub", ".pdf", ".html", ".htm", ".docx", ".md", ".markdown", ".txt"]
 
 
 def is_format_supported(file_path: str | Path) -> bool:
