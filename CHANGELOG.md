@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ai**: Add vision model validation and improve response parsing
 - Add secrets management and configuration system for AI providers
 - Add test image fixtures for vision integration testing
+- **pdf**: Add PDFParser implementation with font-based heading detection
+- **pdf**: Integrate PDFParser with main parser module
+- **text**: Implement TextParser with encoding detection and chapter detection
+- **markdown**: Add MarkdownParser class
+- **markdown**: Register MarkdownParser in parser registry
+- Add DOCX parser implementation
 
 ### Fixed
 
@@ -29,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ai**: Add parsing failure warnings to AI processors
 - **ai**: Complete input validation and error handling improvements
 - **text**: Fix word count mismatch and implement PR review feedback
+- **markdown**: Improve word counting, heading normalization, and image format detection
+- Address PR review feedback for DOCX parser
+- Final PR review fixes for production readiness
+- Updated changelog workflow
 
 ### Documentation
 
@@ -41,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update CHANGELOG.md
 - Update CHANGELOG.md
 - **ai**: Add usage guide and memory documentation
+- **pdf**: Add comprehensive documentation and improve code quality
 - Update CHANGELOG.md
 - Update CHANGELOG.md
 - Update CHANGELOG.md
@@ -63,6 +74,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **ai**: Add comprehensive tests for AI features
 - Add comprehensive integration tests for AI vision features
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+
+### Performance
+
+- **markdown**: Add regex compilation optimization and metadata validation
+
+### Refactored
+
+- **pdf**: Address PR review feedback with critical fixes
+- **pdf**: Implement final PR review improvements
+
+### Testing
+
+- **pdf**: Add comprehensive unit tests for PDFParser
+- **pdf**: Add integration tests for PDF parsing
+- Update parser tests to reflect PDF support
+- **markdown**: Add test fixtures for markdown parser
+- **markdown**: Add comprehensive unit tests for MarkdownParser
+- **markdown**: Add integration tests for MarkdownParser
 
 ### Miscellaneous Tasks
 
@@ -82,6 +120,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ai**: Add vision model validation and improve response parsing
 - Add secrets management and configuration system for AI providers
 - Add test image fixtures for vision integration testing
+- **markdown**: Add MarkdownParser class
+- **markdown**: Register MarkdownParser in parser registry
+- **text**: Implement TextParser with encoding detection and chapter detection
+- Add DOCX parser implementation
 
 ### Fixed
 
@@ -92,6 +134,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ai**: Add parsing failure warnings to AI processors
 - **ai**: Complete input validation and error handling improvements
 - **text**: Fix word count mismatch and implement PR review feedback
+- **markdown**: Improve word counting, heading normalization, and image format detection
+- **text**: Fix word count mismatch and implement PR review feedback
+- Address PR review feedback for DOCX parser
+- Final PR review fixes for production readiness
+- Updated changelog workflow
 
 ### Documentation
 
@@ -104,6 +151,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update CHANGELOG.md
 - Update CHANGELOG.md
 - **ai**: Add usage guide and memory documentation
+- **pdf**: Add comprehensive documentation and improve code quality
+- Update CHANGELOG.md
 - Update CHANGELOG.md
 - Update CHANGELOG.md
 - Update CHANGELOG.md
@@ -124,6 +173,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **ai**: Add comprehensive tests for AI features
 - Add comprehensive integration tests for AI vision features
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+
+### Refactored
+
+- **pdf**: Address PR review feedback with critical fixes
+- **pdf**: Implement final PR review improvements
+
+### Testing
+
+- **pdf**: Add comprehensive unit tests for PDFParser
+- **pdf**: Add integration tests for PDF parsing
+- Update parser tests to reflect PDF support
+### Performance
+
+- **markdown**: Add regex compilation optimization and metadata validation
+
+### Testing
+
+- **markdown**: Add test fixtures for markdown parser
+- **markdown**: Add comprehensive unit tests for MarkdownParser
+- **markdown**: Add integration tests for MarkdownParser
 
 ### Miscellaneous Tasks
 
@@ -142,6 +213,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **text**: Implement TextParser with encoding detection and chapter detection
 - **ai**: Add vision model validation and improve response parsing
 - Add secrets management and configuration system for AI providers
+- **pdf**: Add PDFParser implementation with font-based heading detection
+- **pdf**: Integrate PDFParser with main parser module
+- **markdown**: Add MarkdownParser class
+- **markdown**: Register MarkdownParser in parser registry
+- **text**: Implement TextParser with encoding detection and chapter detection
 
 ### Fixed
 
@@ -151,6 +227,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Address PR review feedback for AI features
 - **ai**: Add parsing failure warnings to AI processors
 - **ai**: Complete input validation and error handling improvements
+- **markdown**: Improve word counting, heading normalization, and image format detection
 - **text**: Fix word count mismatch and implement PR review feedback
 
 ### Documentation
@@ -182,6 +259,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **ai**: Add comprehensive tests for AI features
 - Add comprehensive integration tests for AI vision features
+- **pdf**: Add comprehensive documentation and improve code quality
+- Update CHANGELOG.md
+
+### Refactored
+
+- **pdf**: Address PR review feedback with critical fixes
+- **pdf**: Implement final PR review improvements
+
+### Testing
+
+- **pdf**: Add comprehensive unit tests for PDFParser
+- **pdf**: Add integration tests for PDF parsing
+- Update parser tests to reflect PDF support
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+
+### Performance
+
+- **markdown**: Add regex compilation optimization and metadata validation
+
+### Testing
+
+- **markdown**: Add test fixtures for markdown parser
+- **markdown**: Add comprehensive unit tests for MarkdownParser
+- **markdown**: Add integration tests for MarkdownParser
 
 ### Miscellaneous Tasks
 
@@ -200,6 +304,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **text**: Implement TextParser with encoding detection and chapter detection
 - **ai**: Add vision model validation and improve response parsing
 - Add secrets management and configuration system for AI providers
+- **pdf**: Add PDFParser implementation with font-based heading detection
+- **pdf**: Integrate PDFParser with main parser module
+- **markdown**: Add MarkdownParser class
+- **markdown**: Register MarkdownParser in parser registry
+- **text**: Implement TextParser with encoding detection and chapter detection
 
 ### Fixed
 
@@ -209,6 +318,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Address PR review feedback for AI features
 - **ai**: Add parsing failure warnings to AI processors
 - **ai**: Complete input validation and error handling improvements
+- **markdown**: Improve word counting, heading normalization, and image format detection
 - **text**: Fix word count mismatch and implement PR review feedback
 
 ### Documentation
@@ -238,6 +348,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Testing
 
 - **ai**: Add comprehensive tests for AI features
+- **pdf**: Add comprehensive documentation and improve code quality
+
+### Refactored
+
+- **pdf**: Address PR review feedback with critical fixes
+
+### Testing
+
+- **pdf**: Add comprehensive unit tests for PDFParser
+- **pdf**: Add integration tests for PDF parsing
+- Update parser tests to reflect PDF support
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+
+### Testing
+
+- **markdown**: Add test fixtures for markdown parser
+- **markdown**: Add comprehensive unit tests for MarkdownParser
+- **markdown**: Add integration tests for MarkdownParser
+
+### Miscellaneous Tasks
+
+- Move files and updated cliff.toml file
+
+## [Unreleased]
+
+### Added
+
+- Add automated changelog generation with git-cliff
+- Add release-please for automated version management
+- **pdf**: Add PDFParser implementation with font-based heading detection
+- **pdf**: Integrate PDFParser with main parser module
+- **markdown**: Add MarkdownParser class
+- **markdown**: Register MarkdownParser in parser registry
+
+### Fixed
+
+- Update changelog workflow to use git-cliff-action v4
+- Configure git-cliff to use prepend mode instead of regenerating changelog
+- Remove conflicting OUTPUT env variable from git-cliff workflow
+- **markdown**: Improve word counting, heading normalization, and image format detection
+
+### Documentation
+
+- Update CHANGELOG.md
+- Add troubleshooting for changelog content loss and tag requirements
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Add comprehensive agent prompts for parallel parser development
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+
+### Refactored
+
+- **pdf**: Address PR review feedback with critical fixes
+
+### Testing
+
+- **pdf**: Add comprehensive unit tests for PDFParser
+- **pdf**: Add integration tests for PDF parsing
+- Update parser tests to reflect PDF support
+### Testing
+
+- **markdown**: Add test fixtures for markdown parser
+- **markdown**: Add comprehensive unit tests for MarkdownParser
+- **markdown**: Add integration tests for MarkdownParser
 
 ### Miscellaneous Tasks
 
@@ -256,6 +433,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **text**: Implement TextParser with encoding detection and chapter detection
 - **ai**: Add vision model validation and improve response parsing
 - Add secrets management and configuration system for AI providers
+- **pdf**: Add PDFParser implementation with font-based heading detection
+- **pdf**: Integrate PDFParser with main parser module
+- **markdown**: Add MarkdownParser class
+- **markdown**: Register MarkdownParser in parser registry
 
 ### Fixed
 
@@ -293,6 +474,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **ai**: Add comprehensive tests for AI features
 
+### Testing
+
+- **pdf**: Add comprehensive unit tests for PDFParser
+- **pdf**: Add integration tests for PDF parsing
+- Update parser tests to reflect PDF support
+- **markdown**: Add test fixtures for markdown parser
+- **markdown**: Add comprehensive unit tests for MarkdownParser
+- **markdown**: Add integration tests for MarkdownParser
+
 ### Miscellaneous Tasks
 
 - Move files and updated cliff.toml file
@@ -307,6 +497,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ai**: Add AI-powered document processors
 - **ai**: Add AI-powered image analysis pipeline
 - **ai**: Add file size validation for image processing
+- Add DOCX parser implementation
 - **text**: Implement TextParser with encoding detection and chapter detection
 - **ai**: Add vision model validation and improve response parsing
 
@@ -318,7 +509,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Address PR review feedback for AI features
 - **ai**: Add parsing failure warnings to AI processors
 - **ai**: Complete input validation and error handling improvements
+- Address PR review feedback for DOCX parser
+- Final PR review fixes for production readiness
 - **text**: Fix word count mismatch and implement PR review feedback
+- Updated changelog workflow
 
 ### Documentation
 
@@ -359,6 +553,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ai**: Add AI-powered document processors
 - **ai**: Add AI-powered image analysis pipeline
 - **ai**: Add file size validation for image processing
+- Add DOCX parser implementation
 - **text**: Implement TextParser with encoding detection and chapter detection
 
 ### Fixed
@@ -418,6 +613,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Address PR review feedback for AI features
 - **ai**: Add parsing failure warnings to AI processors
 - **ai**: Complete input validation and error handling improvements
+- **text**: Fix word count mismatch and implement PR review feedback
+- Address PR review feedback for DOCX parser
+- Final PR review fixes for production readiness
+- **text**: Fix word count mismatch and implement PR review feedback
+- Updated changelog workflow
 
 ### Documentation
 
@@ -438,6 +638,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Testing
 
 - **ai**: Add comprehensive tests for AI features
+- Update CHANGELOG.md
 
 ### Miscellaneous Tasks
 
@@ -453,6 +654,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ai**: Add AI-powered document processors
 - **ai**: Add AI-powered image analysis pipeline
 - **ai**: Add file size validation for image processing
+- **text**: Implement TextParser with encoding detection and chapter detection
 
 ### Fixed
 
@@ -460,6 +662,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configure git-cliff to use prepend mode instead of regenerating changelog
 - Remove conflicting OUTPUT env variable from git-cliff workflow
 - Address PR review feedback for AI features
+- **text**: Fix word count mismatch and implement PR review feedback
 
 ### Documentation
 
@@ -478,6 +681,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Testing
 
 - **ai**: Add comprehensive tests for AI features
+- Update CHANGELOG.md
 
 ### Miscellaneous Tasks
 
@@ -496,6 +700,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ai**: Add AI configuration module with multi-provider support
 - **ai**: Add AI-powered document processors
 - **ai**: Add AI-powered image analysis pipeline
+- Add automated changelog generation with git-cliff
+- Add release-please for automated version management
+- **text**: Implement TextParser with encoding detection and chapter detection
+
+### Fixed
+
+- Update changelog workflow to use git-cliff-action v4
+- Configure git-cliff to use prepend mode instead of regenerating changelog
+- Remove conflicting OUTPUT env variable from git-cliff workflow
+- **text**: Fix word count mismatch and implement PR review feedback
+
+### Documentation
+
+- Update CHANGELOG.md
+- Add troubleshooting for changelog content loss and tag requirements
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Add comprehensive agent prompts for parallel parser development
+- Update CHANGELOG.md
+
+### Testing
+
+- **ai**: Add comprehensive tests for AI features
+- Update CHANGELOG.md
+
+### Miscellaneous Tasks
+
+- Move files and updated cliff.toml file
+
+## [Unreleased]
+
+### Added
+
+- Add automated changelog generation with git-cliff
+- Add release-please for automated version management
+- Add DOCX parser implementation
+- **text**: Implement TextParser with encoding detection and chapter detection
+
+### Fixed
+
+- Update changelog workflow to use git-cliff-action v4
+- Configure git-cliff to use prepend mode instead of regenerating changelog
+- Remove conflicting OUTPUT env variable from git-cliff workflow
+- Address PR review feedback for DOCX parser
+
+### Documentation
+
+- Update CHANGELOG.md
+- Add troubleshooting for changelog content loss and tag requirements
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Add comprehensive agent prompts for parallel parser development
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+
+### Miscellaneous Tasks
+
+- Move files and updated cliff.toml file
+
+## [Unreleased]
+
+### Added
+
+- Add automated changelog generation with git-cliff
+- Add release-please for automated version management
+- Add DOCX parser implementation
 
 ### Fixed
 
@@ -512,9 +782,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add comprehensive agent prompts for parallel parser development
 - Update CHANGELOG.md
 
-### Testing
+### Miscellaneous Tasks
 
-- **ai**: Add comprehensive tests for AI features
+- Move files and updated cliff.toml file
+
+## [Unreleased]
+
+### Added
+
+- Add automated changelog generation with git-cliff
+- Add release-please for automated version management
+
+### Fixed
+
+- Update changelog workflow to use git-cliff-action v4
+- Configure git-cliff to use prepend mode instead of regenerating changelog
+- Remove conflicting OUTPUT env variable from git-cliff workflow
+
+### Documentation
+
+- Update CHANGELOG.md
+- Add troubleshooting for changelog content loss and tag requirements
+- Add comprehensive agent prompts for parallel parser development
 
 ### Miscellaneous Tasks
 
