@@ -257,6 +257,140 @@ python examples/epub_to_markdown.py book.epub output/
 
 ---
 
+## AI-Powered Features (Optional)
+
+OmniParser includes **optional AI-powered features** for enhanced document understanding and processing. These features require the `ai` extra dependencies.
+
+### Supported AI Providers
+
+| Provider | Cloud/Local | API Key Required | Best For |
+|----------|-------------|------------------|----------|
+| **Anthropic Claude** | ☁️ Cloud | ✅ Yes | Vision tasks, high-quality analysis |
+| **OpenAI GPT** | ☁️ Cloud | ✅ Yes | General purpose, good performance |
+| **OpenRouter** | ☁️ Cloud | ✅ Yes | Access to multiple models via one API |
+| **Ollama** | 🏠 Local | ❌ No | Privacy, no API costs, offline |
+| **LM Studio** | 🏠 Local | ❌ No | Privacy, no API costs, offline |
+
+### AI Features Available
+
+1. **Auto-Tagging** - Generate relevant tags based on content
+2. **Summarization** - Create concise, detailed, or bullet-point summaries
+3. **Image Description** - Generate alt text and descriptions using vision models
+4. **Quality Scoring** - Assess readability, structure, completeness, and coherence
+5. **Image Analysis** - Extract text (OCR), classify image types, detect objects
+
+### Quick Start with AI
+
+**1. Install AI dependencies:**
+```bash
+uv sync --extra ai
+```
+
+**2. Set up your secrets:**
+```bash
+# Copy the template
+cp secrets_template.json secrets.json
+
+# Edit secrets.json and add your API keys:
+{
+  "anthropic_api_key": "sk-ant-...",
+  "openai_api_key": "sk-...",
+  "ollama_base_url": "http://localhost:11434/v1",
+  "lmstudio_base_url": "http://localhost:1234/v1"
+}
+```
+
+**3. (Optional) Customize configuration:**
+```bash
+# Copy the config template
+cp config_template.json config.json
+
+# Edit config.json to customize models, timeouts, etc.
+```
+
+**4. Use AI features in your code:**
+```python
+from omniparser import parse_document
+from omniparser.processors.ai_tagger import generate_tags
+from omniparser.processors.ai_summarizer import summarize_document
+from omniparser.utils.config import get_ai_options, load_config
+
+# Parse document
+doc = parse_document("book.epub")
+
+# Get AI configuration for your provider
+config = load_config()
+ai_options = get_ai_options("anthropic", config)  # or "openai", "ollama", etc.
+
+# Generate tags
+tags = generate_tags(doc, max_tags=10, ai_options=ai_options)
+print(f"Tags: {', '.join(tags)}")
+
+# Generate summary
+summary = summarize_document(doc, style="concise", ai_options=ai_options)
+print(f"Summary: {summary}")
+```
+
+### Complete AI Example
+
+See `examples/ai_usage_example.py` for comprehensive examples of all AI features:
+
+```bash
+# Use Anthropic Claude
+python examples/ai_usage_example.py --file book.epub --provider anthropic --all-features
+
+# Use local Ollama
+python examples/ai_usage_example.py --file book.epub --provider ollama --summarize
+
+# Compare different providers
+python examples/ai_usage_example.py --file book.epub --compare
+```
+
+### Configuration Files
+
+**`secrets.json` (gitignored)** - API keys and endpoints
+```json
+{
+  "anthropic_api_key": "sk-ant-...",
+  "openai_api_key": "sk-...",
+  "ollama_base_url": "http://localhost:11434/v1"
+}
+```
+
+**`config.json` (optional)** - AI models and parsing settings
+```json
+{
+  "ai": {
+    "default_provider": "anthropic",
+    "anthropic": {
+      "model": "claude-3-haiku-20240307",
+      "max_tokens": 1024,
+      "temperature": 0.3
+    }
+  },
+  "parsing": {
+    "extract_images": true,
+    "clean_text": true
+  }
+}
+```
+
+**Priority order:** `user_options` → `config_local.json` → `config.json` → `defaults`
+
+### Environment Variables (Alternative)
+
+You can also use environment variables instead of `secrets.json`:
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."
+export OPENAI_API_KEY="sk-..."
+export OLLAMA_BASE_URL="http://localhost:11434/v1"
+```
+
+**Note:** `secrets.json` takes precedence over environment variables.
+
+---
+
 ## Implementation Roadmap
 
 ### Phase 1-5: Foundation (18 hours)

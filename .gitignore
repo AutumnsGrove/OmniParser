@@ -27,6 +27,9 @@ MANIFEST
 secrets.json
 secrets_local.json
 
+# Local configuration overrides
+config_local.json
+
 # Virtual environments
 .env
 .venv

@@ -44,7 +44,12 @@ import time
 from enum import Enum
 from typing import Any, Dict, Optional, Union
 
+from omniparser.utils.secrets import get_cached_secrets
+
 logger = logging.getLogger(__name__)
+
+# Load secrets once at module level for performance
+_SECRETS = get_cached_secrets()
 
 
 class AIProvider(Enum):
@@ -230,11 +235,12 @@ class AIConfig:
         if self.provider == AIProvider.ANTHROPIC:
             anthropic_sdk = _import_sdk("anthropic")
 
-            api_key = os.getenv("ANTHROPIC_API_KEY")
+            # Check secrets.json first, then environment variable
+            api_key = _SECRETS.get("anthropic_api_key") or os.getenv("ANTHROPIC_API_KEY")
             if not api_key:
                 raise ValueError(
-                    "ANTHROPIC_API_KEY environment variable not set. "
-                    "Set it with: export ANTHROPIC_API_KEY='sk-ant-...'"
+                    "ANTHROPIC_API_KEY not found. "
+                    "Add to secrets.json or set environment variable: export ANTHROPIC_API_KEY='sk-ant-...'"
                 )
 
             logger.info("Initialized Anthropic client with model: %s", self.model)
@@ -243,11 +249,12 @@ class AIConfig:
         elif self.provider == AIProvider.OPENAI:
             openai_sdk = _import_sdk("openai")
 
-            api_key = os.getenv("OPENAI_API_KEY")
+            # Check secrets.json first, then environment variable
+            api_key = _SECRETS.get("openai_api_key") or os.getenv("OPENAI_API_KEY")
             if not api_key:
                 raise ValueError(
-                    "OPENAI_API_KEY environment variable not set. "
-                    "Set it with: export OPENAI_API_KEY='sk-...'"
+                    "OPENAI_API_KEY not found. "
+                    "Add to secrets.json or set environment variable: export OPENAI_API_KEY='sk-...'"
                 )
 
             logger.info("Initialized OpenAI client with model: %s", self.model)
@@ -256,11 +263,12 @@ class AIConfig:
         elif self.provider == AIProvider.OPENROUTER:
             openai_sdk = _import_sdk("openai")
 
-            api_key = os.getenv("OPENROUTER_API_KEY")
+            # Check secrets.json first, then environment variable
+            api_key = _SECRETS.get("openrouter_api_key") or os.getenv("OPENROUTER_API_KEY")
             if not api_key:
                 raise ValueError(
-                    "OPENROUTER_API_KEY environment variable not set. "
-                    "Set it with: export OPENROUTER_API_KEY='sk-or-...'"
+                    "OPENROUTER_API_KEY not found. "
+                    "Add to secrets.json or set environment variable: export OPENROUTER_API_KEY='sk-or-...'"
                 )
 
             logger.info("Initialized OpenRouter client with model: %s", self.model)
@@ -273,8 +281,11 @@ class AIConfig:
         elif self.provider == AIProvider.OLLAMA:
             openai_sdk = _import_sdk("openai")
 
-            base_url = self.options.get("base_url") or os.getenv(
-                "OLLAMA_BASE_URL", "http://localhost:11434/v1"
+            # Check options first, then secrets.json, then environment variable
+            base_url = (
+                self.options.get("base_url")
+                or _SECRETS.get("ollama_base_url")
+                or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
             )
 
             logger.info(
@@ -288,8 +299,11 @@ class AIConfig:
         elif self.provider == AIProvider.LMSTUDIO:
             openai_sdk = _import_sdk("openai")
 
-            base_url = self.options.get("base_url") or os.getenv(
-                "LMSTUDIO_BASE_URL", "http://localhost:1234/v1"
+            # Check options first, then secrets.json, then environment variable
+            base_url = (
+                self.options.get("base_url")
+                or _SECRETS.get("lmstudio_base_url")
+                or os.getenv("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
             )
 
             logger.info(
