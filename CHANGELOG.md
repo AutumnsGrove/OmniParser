@@ -21,6 +21,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add test image fixtures for vision integration testing
 - **pdf**: Add PDFParser implementation with font-based heading detection
 - **pdf**: Integrate PDFParser with main parser module
+- **markdown**: Add MarkdownParser class
+- **markdown**: Register MarkdownParser in parser registry
+- Add DOCX parser implementation
+
+### Fixed
+
+- Update changelog workflow to use git-cliff-action v4
+- Configure git-cliff to use prepend mode instead of regenerating changelog
+- Remove conflicting OUTPUT env variable from git-cliff workflow
+- Address PR review feedback for AI features
+- **ai**: Add parsing failure warnings to AI processors
+- **ai**: Complete input validation and error handling improvements
+- **text**: Fix word count mismatch and implement PR review feedback
+- **markdown**: Improve word counting, heading normalization, and image format detection
+- Address PR review feedback for DOCX parser
+- Final PR review fixes for production readiness
+- Updated changelog workflow
+
+### Documentation
+
+- Update CHANGELOG.md
+- Add troubleshooting for changelog content loss and tag requirements
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Add comprehensive agent prompts for parallel parser development
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- **ai**: Add usage guide and memory documentation
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Add guidance for file paths with spaces in CLI commands
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Add comprehensive test fixtures README
+- Update CHANGELOG.md
+- Add comprehensive NEXT_STEPS action plan for AI testing
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- **pdf**: Add comprehensive documentation and improve code quality
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Add comprehensive AI testing completion summary
+
+### Performance
+
+- **markdown**: Add regex compilation optimization and metadata validation
+
+### Refactored
+
+- **ai**: Improve AI config with retry logic and better error handling
+- **pdf**: Address PR review feedback with critical fixes
+- **pdf**: Implement final PR review improvements
+
+### Testing
+
+- **ai**: Add comprehensive tests for AI features
+- Add comprehensive integration tests for AI vision features
+- **pdf**: Add comprehensive unit tests for PDFParser
+- **pdf**: Add integration tests for PDF parsing
+- Update parser tests to reflect PDF support
+- **markdown**: Add test fixtures for markdown parser
+- **markdown**: Add comprehensive unit tests for MarkdownParser
+- **markdown**: Add integration tests for MarkdownParser
+- Add LM Studio integration with Anthropic fallback for AI tests
+- Add comprehensive unit tests for critical AI modules (Phase 3)
+
+### Miscellaneous Tasks
+
+- Move files and updated cliff.toml file
+- Reorganize AI testing documentation into dedicated directory
+
+## [Unreleased]
+
+### Added
+
+- Add automated changelog generation with git-cliff
+- Add release-please for automated version management
+- **ai**: Add AI configuration module with multi-provider support
+- **ai**: Add AI-powered document processors
+- **ai**: Add AI-powered image analysis pipeline
+- **ai**: Add file size validation for image processing
+- **text**: Implement TextParser with encoding detection and chapter detection
+- **ai**: Add vision model validation and improve response parsing
+- Add secrets management and configuration system for AI providers
+- Add test image fixtures for vision integration testing
+- **pdf**: Add PDFParser implementation with font-based heading detection
+- **pdf**: Integrate PDFParser with main parser module
 - **text**: Implement TextParser with encoding detection and chapter detection
 - **markdown**: Add MarkdownParser class
 - **markdown**: Register MarkdownParser in parser registry
