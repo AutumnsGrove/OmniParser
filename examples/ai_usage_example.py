@@ -25,6 +25,9 @@ Examples:
 
     # Full AI pipeline with all features
     python examples/ai_usage_example.py --provider anthropic --file book.epub --all-features
+
+    # File paths with spaces must be quoted
+    python examples/ai_usage_example.py --provider anthropic --file "My Book.epub" --all-features
 """
 
 import sys

@@ -595,6 +595,31 @@ logging.basicConfig(level=logging.DEBUG)
 # Raw responses will be logged for debugging
 ```
 
+### Issue: "No such file or directory" when using CLI with spaces in filename
+
+**Problem**: Command fails when file path contains spaces:
+
+```bash
+# ❌ This fails
+python examples/ai_usage_example.py --file My Book.epub --provider anthropic
+# Error: FileNotFoundError: [Errno 2] No such file or directory: 'My'
+```
+
+**Solution**: Quote file paths that contain spaces:
+
+```bash
+# ✅ Correct - with quotes
+python examples/ai_usage_example.py --file "My Book.epub" --provider anthropic
+
+# ✅ Also works - with single quotes
+python examples/ai_usage_example.py --file 'My Book.epub' --provider anthropic
+
+# ✅ Alternative - escape spaces
+python examples/ai_usage_example.py --file My\ Book.epub --provider anthropic
+```
+
+This is standard shell behavior and applies to all command-line tools, not just OmniParser.
+
 ## API Reference
 
 See module docstrings for detailed API documentation:

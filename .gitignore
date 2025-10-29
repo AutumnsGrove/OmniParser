@@ -116,3 +116,4 @@ docs/_build/
 
 # BaseProject integration backups
 .baseproject-backup-*/
+config.json

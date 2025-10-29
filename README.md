@@ -346,6 +346,18 @@ python examples/ai_usage_example.py --file book.epub --provider ollama --summari
 python examples/ai_usage_example.py --file book.epub --compare
 ```
 
+**Important Note:** If your file path contains spaces, you must quote it in your shell command:
+
+```bash
+# ✅ Correct - with quotes
+python examples/ai_usage_example.py --file "My Book With Spaces.epub" --provider anthropic --all-features
+
+# ❌ Incorrect - without quotes (will fail)
+python examples/ai_usage_example.py --file My Book With Spaces.epub --provider anthropic --all-features
+```
+
+This is standard shell behavior and applies to all command-line tools, not just OmniParser.
+
 ### Configuration Files
 
 **`secrets.json` (gitignored)** - API keys and endpoints
