@@ -32,7 +32,6 @@ def parse_document(
     Future support planned for:
     - DOCX (.docx)
     - Markdown (.md)
-    - Text (.txt)
 
     Args:
         file_path: Path to file to parse, or URL string (string or Path object).
@@ -124,11 +123,10 @@ def parse_document(
             f"Markdown format not yet implemented. Coming in future version."
         )
 
-    # Text format (not yet implemented)
-    elif file_extension in [".txt"]:
-        raise UnsupportedFormatError(
-            f"Text format not yet implemented. Coming in future version."
-        )
+    # Text format
+    elif file_extension in [".txt", ""]:
+        text_parser = TextParser(options)
+        return text_parser.parse(file_path)
 
     # Unknown format
     else:
@@ -145,6 +143,7 @@ def get_supported_formats() -> list[str]:
         List of file extensions (e.g., ['.epub', '.pdf', '.html', '.htm']).
     """
     return [".epub", ".pdf", ".html", ".htm"]
+
 
 
 def is_format_supported(file_path: str | Path) -> bool:
