@@ -13,6 +13,7 @@ from .exceptions import UnsupportedFormatError, FileReadError
 from .models import Document
 from .parsers.epub_parser import EPUBParser
 from .parsers.html_parser import HTMLParser
+from .parsers.markdown_parser import MarkdownParser
 
 logger = logging.getLogger(__name__)
 
@@ -112,11 +113,10 @@ def parse_document(
         html_parser = HTMLParser(options)
         return html_parser.parse(file_path)
 
-    # Markdown format (not yet implemented)
+    # Markdown format
     elif file_extension in [".md", ".markdown"]:
-        raise UnsupportedFormatError(
-            f"Markdown format not yet implemented. Coming in future version."
-        )
+        markdown_parser = MarkdownParser(options)
+        return markdown_parser.parse(file_path)
 
     # Text format (not yet implemented)
     elif file_extension in [".txt"]:
@@ -136,9 +136,9 @@ def get_supported_formats() -> list[str]:
     """Get list of currently supported file formats.
 
     Returns:
-        List of file extensions (e.g., ['.epub', '.html', '.htm']).
+        List of file extensions (e.g., ['.epub', '.html', '.htm', '.md', '.markdown']).
     """
-    return [".epub", ".html", ".htm"]
+    return [".epub", ".html", ".htm", ".md", ".markdown"]
 
 
 def is_format_supported(file_path: str | Path) -> bool:
