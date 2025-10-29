@@ -572,3 +572,128 @@ class TestMarkdownParserEdgeCases:
         assert parser._estimate_reading_time(450) == 2
         # Small amounts round to 1
         assert parser._estimate_reading_time(10) == 1
+
+    def test_large_file_warning(self, tmp_path):
+        """Test warning for large files (>50MB)."""
+        parser = MarkdownParser()
+        file_path = tmp_path / "large.md"
+        # Create a file larger than 50MB
+        # Each iteration writes ~5MB, so 11 iterations = ~55MB
+        large_content = "# Test\n\n" + ("word " * 1000000)  # ~5MB of text
+        # Write it multiple times to exceed 50MB
+        with open(file_path, "w", encoding="utf-8") as f:
+            for _ in range(11):
+                f.write(large_content)
+
+        # Verify file is actually >50MB
+        file_size_mb = file_path.stat().st_size / (1024 * 1024)
+        assert file_size_mb > 50, f"Test file is only {file_size_mb:.1f}MB"
+
+        doc = parser.parse(file_path)
+
+        # Should have warning about large file
+        assert any("Large file size" in w for w in doc.processing_info.warnings)
+
+    def test_windows_line_endings(self, tmp_path):
+        """Test handling files with Windows line endings (CRLF)."""
+        parser = MarkdownParser()
+        file_path = tmp_path / "windows.md"
+        # Create markdown with Windows line endings
+        content = "# Introduction\r\n\r\nContent here.\r\n\r\n## Section 1\r\n\r\nMore content.\r\n"
+        file_path.write_text(content, encoding="utf-8")
+
+        doc = parser.parse(file_path)
+
+        # Should parse successfully
+        assert isinstance(doc, Document)
+        assert len(doc.chapters) >= 1
+        # Content should be preserved (line endings normalized by Python)
+        assert "Introduction" in doc.content
+
+    def test_extract_image_format_data_uri(self):
+        """Test image format extraction from data URIs."""
+        parser = MarkdownParser()
+
+        # PNG data URI
+        assert parser._extract_image_format("data:image/png;base64,iVBOR...") == "png"
+        # JPEG data URI
+        assert (
+            parser._extract_image_format("data:image/jpeg;base64,/9j/4AA...") == "jpeg"
+        )
+        # Invalid data URI
+        assert parser._extract_image_format("data:text/plain,hello") == "unknown"
+
+    def test_extract_image_format_query_params(self):
+        """Test image format extraction from query parameters."""
+        parser = MarkdownParser()
+
+        # format parameter
+        assert (
+            parser._extract_image_format("https://example.com/image?format=png")
+            == "png"
+        )
+        # fmt parameter
+        assert parser._extract_image_format("https://cdn.com/abc?fmt=webp") == "webp"
+        # Mixed case
+        assert (
+            parser._extract_image_format("https://example.com/img?FORMAT=JPEG")
+            == "jpeg"
+        )
+
+    def test_extract_image_format_no_extension(self):
+        """Test image format extraction for URLs without extension."""
+        parser = MarkdownParser()
+
+        # No extension
+        assert parser._extract_image_format("https://example.com/image") == "unknown"
+        # Just path
+        assert parser._extract_image_format("images/photo") == "unknown"
+
+    def test_extract_image_format_common_extensions(self):
+        """Test image format extraction for common extensions."""
+        parser = MarkdownParser()
+
+        assert parser._extract_image_format("image.png") == "png"
+        assert parser._extract_image_format("photo.jpg") == "jpg"
+        assert parser._extract_image_format("photo.JPEG") == "jpeg"
+        assert parser._extract_image_format("icon.svg") == "svg"
+        assert parser._extract_image_format("image.webp") == "webp"
+        assert parser._extract_image_format("graphic.gif") == "gif"
+
+    def test_count_words_with_markdown_syntax(self):
+        """Test word counting excludes markdown syntax."""
+        parser = MarkdownParser()
+
+        # Should count only actual words, not markdown syntax
+        text = "# Heading\n\nThis is **bold** and *italic* text."
+        # Should count: Heading, This, is, bold, and, italic, text = 7 words
+        # (# is removed but "Heading" is kept)
+        assert parser._count_words(text) == 7
+
+        # Test with code blocks
+        text_with_code = "Hello\n\n```python\ncode here\n```\n\nworld"
+        # Should count: Hello, world = 2 words
+        assert parser._count_words(text_with_code) == 2
+
+        # Test with URLs
+        text_with_url = "Check out https://example.com for more info"
+        # Should count: Check, out, for, more, info = 5 words
+        assert parser._count_words(text_with_url) == 5
+
+        # Test with images
+        text_with_image = "Here is an image: ![alt text](image.png) in text"
+        # Should count: Here, is, an, image, alt, text, in, text = 8 words
+        assert parser._count_words(text_with_image) == 8
+
+    def test_normalize_h2_horizontal_rule(self):
+        """Test H2 normalization doesn't match horizontal rules."""
+        parser = MarkdownParser()
+
+        # Horizontal rule should not be converted to heading
+        text = "Some text\n\n---\n\nMore text"
+        normalized = parser._normalize_markdown(text)
+
+        # Should not contain "## Some text"
+        # The horizontal rule should remain because the underline length
+        # doesn't match the text length
+        assert "## Some text" not in normalized or "---" in normalized

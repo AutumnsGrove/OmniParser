@@ -524,9 +524,22 @@ class MarkdownParser(BaseParser):
 
         # Convert underline-style H2 (---) to ## style
         # Pattern: text on one line, followed by line of ---
+        # Only match if underline length is similar to text length (avoid horizontal rules)
+        def replace_h2(match: re.Match[str]) -> str:
+            title = match.group(1)
+            underline = match.group(2)
+            # Check if underline length is within 50% of title length
+            # This avoids matching horizontal rules (---)
+            if (
+                len(underline) >= 3
+                and abs(len(title) - len(underline)) <= len(title) * 0.5
+            ):
+                return f"## {title}"
+            return match.group(0)
+
         text = re.sub(
-            r"^(.+)\n-+\s*$",
-            r"## \1",
+            r"^(.+)\n(-{3,})\s*$",
+            replace_h2,
             text,
             flags=re.MULTILINE,
         )
@@ -565,13 +578,8 @@ class MarkdownParser(BaseParser):
             image_url = match.group(2).strip()
             position = match.start()
 
-            # Determine format from URL extension
-            format_name = "unknown"
-            if "." in image_url:
-                ext = image_url.split(".")[-1].lower()
-                # Remove query parameters if present
-                ext = ext.split("?")[0]
-                format_name = ext
+            # Determine format from URL using improved detection
+            format_name = self._extract_image_format(image_url)
 
             image_ref = ImageReference(
                 image_id=f"img_{idx:03d}",
@@ -589,8 +597,57 @@ class MarkdownParser(BaseParser):
 
         return images
 
+    def _extract_image_format(self, url: str) -> str:
+        """Extract image format from URL or data URI.
+
+        Handles:
+        - Data URIs (data:image/png;base64,...)
+        - URLs with format in query parameters (?format=png)
+        - URLs with file extensions
+        - URLs without extensions (returns 'unknown')
+
+        Args:
+            url: Image URL or data URI.
+
+        Returns:
+            Image format (e.g., 'png', 'jpg', 'webp') or 'unknown'.
+        """
+        # Handle data URIs
+        if url.startswith("data:"):
+            match = re.match(r"data:image/(\w+)", url)
+            return match.group(1) if match else "unknown"
+
+        # Check for query parameters with format
+        if "?" in url:
+            query_part = url.split("?", 1)[1]
+            # Look for format=xxx or fmt=xxx in query
+            format_match = re.search(r"(?:format|fmt)=(\w+)", query_part, re.IGNORECASE)
+            if format_match:
+                return format_match.group(1).lower()
+
+        # Extract from file extension
+        # Remove query parameters first
+        path = url.split("?")[0]
+        # Get the last part after the last slash
+        filename = path.split("/")[-1]
+        if "." in filename:
+            ext = filename.split(".")[-1].lower()
+            # Common image extensions
+            if ext in ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico"]:
+                return ext
+            # Return extension even if not in common list
+            return ext
+
+        return "unknown"
+
     def _count_words(self, text: str) -> int:
-        """Count words in text.
+        """Count words in text, excluding markdown syntax.
+
+        Removes:
+        - Code blocks (fenced with ```)
+        - Inline code (backticks)
+        - Markdown syntax characters (#, *, _, [], (), !)
+        - URLs (http://, https://)
 
         Args:
             text: Text to count words in.
@@ -598,7 +655,23 @@ class MarkdownParser(BaseParser):
         Returns:
             Word count.
         """
-        return len(text.split())
+        # Remove code blocks
+        text = re.sub(r"```[\s\S]*?```", "", text)
+        # Remove inline code
+        text = re.sub(r"`[^`]+`", "", text)
+        # Remove URLs
+        text = re.sub(r"https?://\S+", "", text)
+        # Remove markdown image syntax
+        text = re.sub(r"!\[([^\]]*)\]\([^\)]+\)", r"\1", text)
+        # Remove markdown link syntax, keep link text
+        text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
+        # Remove markdown heading markers
+        text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+        # Remove emphasis markers (but not in the middle of words)
+        text = re.sub(r"(\*\*|__)(.*?)\1", r"\2", text)
+        text = re.sub(r"(\*|_)(.*?)\1", r"\2", text)
+        # Count remaining words
+        return len([w for w in text.split() if w.strip()])
 
     def _estimate_reading_time(self, word_count: int) -> int:
         """Estimate reading time in minutes.
