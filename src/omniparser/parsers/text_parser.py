@@ -13,6 +13,7 @@ Features:
 - Fallback to single chapter if no structure detected
 """
 
+# Standard library
 import logging
 import re
 import time
@@ -21,6 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+# Local
 from ..base.base_parser import BaseParser
 from ..exceptions import FileReadError, ParsingError, ValidationError
 from ..models import Chapter, Document, ImageReference, Metadata, ProcessingInfo

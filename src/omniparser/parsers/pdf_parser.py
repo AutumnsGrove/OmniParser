@@ -15,7 +15,7 @@ Features:
 - Integration with shared processors (chapter_detector, text_cleaner)
 """
 
-# Standard library imports
+# Standard library
 import io
 import logging
 import signal
@@ -28,11 +28,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-# Third-party imports
+# Third-party
 import fitz  # PyMuPDF
 from PIL import Image
 
-# Local imports
+# Local
 from ..base.base_parser import BaseParser
 from ..exceptions import FileReadError, ParsingError, ValidationError
 from ..models import Chapter, Document, ImageReference, Metadata, ProcessingInfo

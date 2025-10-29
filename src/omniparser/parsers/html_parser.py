@@ -8,6 +8,7 @@ Classes:
     HTMLParser: Parser for HTML files and URLs.
 """
 
+# Standard library
 import logging
 import tempfile
 import threading
@@ -19,12 +20,14 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from urllib.parse import urljoin, urlparse
 
+# Third-party
 import requests
 import trafilatura
 from bs4 import BeautifulSoup
 from PIL import Image
 from readability import Document as ReadabilityDocument
 
+# Local
 from ..base.base_parser import BaseParser
 from ..exceptions import FileReadError, NetworkError, ParsingError
 from ..models import Document, ImageReference, Metadata, ProcessingInfo
