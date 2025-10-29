@@ -42,13 +42,14 @@ def generate_tags(
 
     Args:
         document: Parsed document to generate tags for.
-        max_tags: Maximum number of tags to generate (default: 10).
+        max_tags: Maximum number of tags to generate (default: 10, range: 1-100).
         ai_options: AI configuration options (see AIConfig for details).
 
     Returns:
         List of generated tags (lowercase, deduplicated).
 
     Raises:
+        ValueError: If max_tags is invalid or document has no content.
         ValueError: If AI provider API key is not set.
         Exception: If AI API call fails.
 
@@ -61,6 +62,14 @@ def generate_tags(
         >>> # Use OpenAI instead of Anthropic
         >>> tags = generate_tags(doc, ai_options={'ai_provider': 'openai'})
     """
+    # Validate inputs
+    if max_tags <= 0:
+        raise ValueError("max_tags must be positive")
+    if max_tags > 100:
+        raise ValueError("max_tags must not exceed 100")
+    if not document.content or len(document.content.strip()) == 0:
+        raise ValueError("Document has no content to analyze")
+
     try:
         ai_config = AIConfig(ai_options)
     except (ValueError, ImportError) as e:

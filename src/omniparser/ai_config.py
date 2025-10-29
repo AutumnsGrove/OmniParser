@@ -21,12 +21,16 @@ Environment Variables:
 
 Example:
     >>> import os
+    >>> # SECURITY WARNING: Never hardcode API keys in source code!
+    >>> # Always use environment variables or secure secret management.
+    >>> # The examples below show the format but should use real env vars.
+    >>>
     >>> # Cloud provider
-    >>> os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-...'
+    >>> os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-...'  # Example only - use real env!
     >>> config = AIConfig({'ai_provider': 'anthropic'})
     >>> response = config.generate("What is 2+2?", system="You are a math tutor")
 
-    >>> # Local model via Ollama
+    >>> # Local model via Ollama (no API key needed)
     >>> config = AIConfig({
     ...     'ai_provider': 'ollama',
     ...     'ai_model': 'llama3.2:latest'
@@ -329,20 +333,39 @@ class AIConfig:
                 else:
                     # OpenAI, OpenRouter, Ollama, and LM Studio all use OpenAI-compatible API
                     return self._generate_openai(prompt, system)
+            except (ConnectionError, TimeoutError, OSError) as e:
+                # Network errors - always retry
+                if attempt < self.max_retries - 1:
+                    delay = self.retry_delay * (2**attempt)
+                    logger.warning(
+                        f"Network error (attempt {attempt + 1}/{self.max_retries}), "
+                        f"retrying in {delay}s: {e}"
+                    )
+                    time.sleep(delay)
+                else:
+                    logger.error(f"Network error after {attempt + 1} attempts: {e}")
+                    raise
             except Exception as e:
-                # Check if this is a rate limit or retriable error
+                # API errors - check if retriable
+                error_type = type(e).__name__
                 is_retriable = self._is_retriable_error(e)
 
                 if attempt < self.max_retries - 1 and is_retriable:
                     # Exponential backoff
                     delay = self.retry_delay * (2**attempt)
                     logger.warning(
-                        f"API call failed (attempt {attempt + 1}/{self.max_retries}), "
+                        f"API error {error_type} (attempt {attempt + 1}/{self.max_retries}), "
                         f"retrying in {delay}s: {e}"
                     )
                     time.sleep(delay)
+                elif not is_retriable:
+                    # Non-retriable error (e.g., invalid API key, bad request)
+                    logger.error(f"Non-retriable error {error_type}: {e}")
+                    raise
                 else:
-                    logger.error(f"API call failed after {attempt + 1} attempts: {e}")
+                    logger.error(
+                        f"API error {error_type} after {attempt + 1} attempts: {e}"
+                    )
                     raise
 
         # Should not reach here, but for type safety
@@ -352,22 +375,50 @@ class AIConfig:
         """
         Determine if an error is retriable.
 
+        Checks for:
+        - Rate limit errors (429)
+        - Server errors (500, 502, 503, 504)
+        - Timeout errors
+        - Connection errors
+
+        Non-retriable errors include:
+        - Authentication errors (401, 403)
+        - Bad request errors (400)
+        - Not found errors (404)
+
         Args:
             error: Exception to check.
 
         Returns:
-            True if error is retriable (rate limit, timeout, network error).
+            True if error is retriable (rate limit, timeout, server error).
         """
         error_str = str(error).lower()
+
+        # Check for non-retriable errors first
+        non_retriable_indicators = [
+            "401",
+            "403",
+            "400",
+            "404",
+            "invalid api key",
+            "authentication",
+            "unauthorized",
+            "forbidden",
+        ]
+        if any(indicator in error_str for indicator in non_retriable_indicators):
+            return False
+
+        # Check for retriable errors
         retriable_indicators = [
             "rate limit",
+            "429",  # Rate limit
+            "500",  # Internal server error
+            "502",  # Bad gateway
+            "503",  # Service unavailable
+            "504",  # Gateway timeout
             "timeout",
             "connection",
             "network",
-            "503",
-            "429",
-            "502",
-            "504",
         ]
         return any(indicator in error_str for indicator in retriable_indicators)
 

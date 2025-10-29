@@ -43,7 +43,7 @@ def summarize_document(
 
     Args:
         document: Parsed document to summarize.
-        max_length: Maximum summary length in words (default: 500).
+        max_length: Maximum summary length in words (default: 500, range: 1-10000).
         style: Summary style - "concise", "detailed", or "bullet" (default: "concise").
             - "concise": 2-3 sentence overview
             - "detailed": Comprehensive summary up to max_length words
@@ -54,7 +54,8 @@ def summarize_document(
         Document summary as a string.
 
     Raises:
-        ValueError: If AI provider API key is not set or style is invalid.
+        ValueError: If max_length is invalid, style is invalid, or document has no content.
+        ValueError: If AI provider API key is not set.
         Exception: If AI API call fails.
 
     Example:
@@ -75,9 +76,18 @@ def summarize_document(
         ...     ai_options={'ai_provider': 'ollama', 'ai_model': 'llama3.2:latest'}
         ... )
     """
+    # Validate inputs
     valid_styles = ["concise", "detailed", "bullet"]
     if style not in valid_styles:
         raise ValueError(f"Invalid style '{style}'. Must be one of: {valid_styles}")
+
+    if max_length <= 0:
+        raise ValueError("max_length must be positive")
+    if max_length > 10000:
+        raise ValueError("max_length must not exceed 10000 words")
+
+    if not document.content or len(document.content.strip()) == 0:
+        raise ValueError("Document has no content to summarize")
 
     try:
         ai_config = AIConfig(ai_options)
