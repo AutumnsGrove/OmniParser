@@ -26,6 +26,7 @@ from typing import Any, Dict, List, Optional, Union
 from ..base.base_parser import BaseParser
 from ..exceptions import FileReadError, ParsingError, ValidationError
 from ..models import Chapter, Document, ImageReference, Metadata, ProcessingInfo
+from ..processors.metadata_builder import MetadataBuilder
 from ..processors.text_cleaner import clean_text
 from ..utils.encoding import detect_encoding, normalize_line_endings
 
@@ -535,7 +536,7 @@ class TextParser(BaseParser):
         # Calculate line count
         line_count = len(lines)
 
-        return Metadata(
+        return MetadataBuilder.build(
             title=title,
             author=None,
             authors=None,

@@ -27,6 +27,7 @@ from PIL import Image
 from ..base.base_parser import BaseParser
 from ..exceptions import FileReadError, ParsingError, ValidationError
 from ..models import Chapter, Document, ImageReference, Metadata, ProcessingInfo
+from ..processors.metadata_builder import MetadataBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -390,7 +391,7 @@ class EPUBParser(BaseParser):
         # Calculate file size
         file_size = file_path.stat().st_size
 
-        return Metadata(
+        return MetadataBuilder.build(
             title=title,
             author=author,
             authors=authors,
@@ -958,7 +959,7 @@ class EPUBParser(BaseParser):
         """Extract images to specified directory.
 
         Helper method that performs the actual image extraction and saves to
-        the provided directory path.
+        the provided directory path. Uses shared image_extractor utilities.
 
         Args:
             image_items: List of EPUB image items from ebooklib.
@@ -967,6 +968,12 @@ class EPUBParser(BaseParser):
         Returns:
             List of ImageReference objects with file paths pointing to saved images.
         """
+        from ..processors.image_extractor import (
+            get_image_dimensions,
+            save_image,
+            validate_image_data,
+        )
+
         images: List[ImageReference] = []
 
         for idx, item in enumerate(image_items, start=1):
@@ -975,25 +982,26 @@ class EPUBParser(BaseParser):
                 image_name = item.get_name()  # e.g., "images/cover.jpg"
                 image_content = item.get_content()  # bytes
 
-                # Save to output directory (preserve subdirectory structure)
-                image_path = output_path / image_name
-                image_path.parent.mkdir(parents=True, exist_ok=True)
+                # Validate image data
+                is_valid, error = validate_image_data(image_content)
+                if not is_valid:
+                    logger.warning(f"Skipping invalid image {image_name}: {error}")
+                    self._warnings.append(f"Skipped invalid image {image_name}: {error}")
+                    continue
 
-                with open(image_path, "wb") as f:
-                    f.write(image_content)
+                # Save image (preserves subdirectory structure)
+                image_path, format_name = save_image(
+                    image_content,
+                    output_path,
+                    preserve_subdirs=True,
+                    original_path=image_name,
+                    counter=idx,
+                )
 
-                # Get image dimensions and format using PIL
-                width: Optional[int] = None
-                height: Optional[int] = None
-                format_name: str = "unknown"
-
-                try:
-                    with Image.open(image_path) as img:
-                        width, height = img.size
-                        format_name = img.format.lower() if img.format else "unknown"
-                except Exception as e:
-                    logger.warning(f"Could not read image {image_name}: {e}")
-                    self._warnings.append(f"Could not read image {image_name}: {e}")
+                # Get image dimensions
+                width, height, detected_format = get_image_dimensions(image_content)
+                if detected_format != "unknown":
+                    format_name = detected_format
 
                 # Create ImageReference
                 image_ref = ImageReference(

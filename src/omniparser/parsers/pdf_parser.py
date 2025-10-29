@@ -36,6 +36,7 @@ from PIL import Image
 from ..base.base_parser import BaseParser
 from ..exceptions import FileReadError, ParsingError, ValidationError
 from ..models import Chapter, Document, ImageReference, Metadata, ProcessingInfo
+from ..processors.metadata_builder import MetadataBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -810,7 +811,7 @@ class PDFParser(BaseParser):
             "pdf_version": doc.metadata.get("format", "Unknown"),
         }
 
-        return Metadata(
+        return MetadataBuilder.build(
             title=title,
             author=author,
             description=subject,
@@ -829,7 +830,7 @@ class PDFParser(BaseParser):
         1. Iterate through pages
         2. Get image list: page.get_images()
         3. Extract image data: doc.extract_image(xref)
-        4. Save to output directory
+        4. Validate and save using shared image_extractor
         5. Create ImageReference objects
 
         Args:
@@ -838,6 +839,12 @@ class PDFParser(BaseParser):
         Returns:
             List of ImageReference objects
         """
+        from ..processors.image_extractor import (
+            get_image_dimensions,
+            save_image,
+            validate_image_data,
+        )
+
         images = []
 
         # Set up output directory
@@ -877,48 +884,41 @@ class PDFParser(BaseParser):
                     image_data = base_image["image"]
                     image_ext = base_image["ext"]
 
-                    # Generate unique image ID
-                    image_id = f"img_{image_counter:04d}"
+                    # Validate image data using shared utility
+                    is_valid, error = validate_image_data(
+                        image_data, min_size=MIN_IMAGE_SIZE
+                    )
+                    if not is_valid:
+                        logger.debug(
+                            f"Skipping invalid image on page {page_num + 1}: {error}"
+                        )
+                        continue
+
+                    # Increment counter
                     image_counter += 1
 
-                    # Save image file
-                    image_filename = f"{image_id}.{image_ext}"
-                    image_path = output_dir / image_filename
+                    # Save image using shared utility
+                    image_path, format_name = save_image(
+                        image_data,
+                        output_dir,
+                        base_name="img",
+                        extension=image_ext,
+                        counter=image_counter,
+                    )
 
-                    with open(image_path, "wb") as img_file:
-                        img_file.write(image_data)
-
-                    # Verify and get image dimensions
-                    try:
-                        # First pass: verify image is valid
-                        with Image.open(io.BytesIO(image_data)) as pil_img:
-                            pil_img.verify()  # Verify image integrity
-
-                        # Second pass: get dimensions (verify() closes the image)
-                        with Image.open(io.BytesIO(image_data)) as pil_img:
-                            width, height = pil_img.size
-                            size = (width, height)
-
-                            # Filter out tiny images (likely noise/artifacts)
-                            if width < MIN_IMAGE_SIZE or height < MIN_IMAGE_SIZE:
-                                logger.debug(
-                                    f"Skipping small image ({width}x{height}) "
-                                    f"on page {page_num + 1}"
-                                )
-                                continue
-
-                    except (IOError, OSError, Image.UnidentifiedImageError) as e:
-                        logger.debug(f"Failed to verify/process image: {e}")
-                        continue
+                    # Get image dimensions using shared utility
+                    width, height, detected_format = get_image_dimensions(image_data)
+                    if detected_format != "unknown":
+                        format_name = detected_format
 
                     # Create ImageReference
                     img_ref = ImageReference(
-                        image_id=image_id,
+                        image_id=f"img_{image_counter:04d}",
                         position=page_num * 1000 + img_index,  # Approximate position
                         file_path=str(image_path),
                         alt_text=f"Image on page {page_num + 1}",
-                        size=size,
-                        format=image_ext,
+                        size=(width, height) if width and height else None,
+                        format=format_name,
                     )
 
                     images.append(img_ref)

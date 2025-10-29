@@ -27,6 +27,7 @@ from ..base.base_parser import BaseParser
 from ..exceptions import FileReadError, ParsingError, ValidationError
 from ..models import Chapter, Document, ImageReference, Metadata, ProcessingInfo
 from ..processors.chapter_detector import detect_chapters
+from ..processors.metadata_builder import MetadataBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -473,7 +474,7 @@ class MarkdownParser(BaseParser):
         if custom_fields:
             self._validate_custom_fields(custom_fields)
 
-        return Metadata(
+        return MetadataBuilder.build(
             title=title,
             author=author,
             authors=authors,
@@ -538,7 +539,7 @@ class MarkdownParser(BaseParser):
         # Get file size
         file_size = file_path.stat().st_size
 
-        return Metadata(
+        return MetadataBuilder.build(
             title=title,
             author=None,
             authors=None,
