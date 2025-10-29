@@ -21,7 +21,6 @@ Not Yet Implemented:
 import io
 import logging
 import re
-import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -41,6 +40,9 @@ from ..processors.chapter_detector import detect_chapters
 from ..processors.text_cleaner import clean_text
 
 logger = logging.getLogger(__name__)
+
+# Security: Maximum size for individual images (50MB)
+MAX_IMAGE_SIZE = 50 * 1024 * 1024  # 50MB
 
 
 class DOCXParser(BaseParser):
@@ -524,8 +526,8 @@ class DOCXParser(BaseParser):
         for row_idx, row in enumerate(table.rows):
             cells = []
             for cell in row.cells:
-                # Get cell text (strip newlines and extra whitespace)
-                cell_text = cell.text.strip().replace("\n", " ")
+                # Get cell text (handle None case for empty cells)
+                cell_text = (cell.text or "").strip().replace("\n", " ")
                 # Escape pipe characters to prevent breaking table formatting
                 cell_text = cell_text.replace("|", "\\|")
                 cells.append(cell_text)
@@ -598,7 +600,10 @@ class DOCXParser(BaseParser):
         """Extract images to specified directory.
 
         Helper method that performs the actual image extraction and saves to
-        the provided directory path.
+        the provided directory path. Includes security validation:
+        - Skips images larger than 50MB (MAX_IMAGE_SIZE)
+        - Validates image data with PIL before saving
+        - Logs warnings and continues on invalid images
 
         Args:
             docx: DocxDocument object.
@@ -606,6 +611,7 @@ class DOCXParser(BaseParser):
 
         Returns:
             List of ImageReference objects with file paths pointing to saved images.
+            Invalid or oversized images are skipped with warnings logged.
         """
         images: List[ImageReference] = []
 
@@ -618,6 +624,17 @@ class DOCXParser(BaseParser):
                         self._image_counter += 1
                         image_part = rel.target_part
                         image_bytes = image_part.blob
+
+                        # Security: Validate image size to prevent disk exhaustion
+                        if len(image_bytes) > MAX_IMAGE_SIZE:
+                            logger.warning(
+                                f"Skipping image {self._image_counter}: too large "
+                                f"({len(image_bytes) / 1024 / 1024:.1f} MB, max {MAX_IMAGE_SIZE / 1024 / 1024:.0f} MB)"
+                            )
+                            self._warnings.append(
+                                f"Skipped oversized image: {len(image_bytes) / 1024 / 1024:.1f} MB"
+                            )
+                            continue
 
                         # Determine image format from content type
                         content_type = image_part.content_type
@@ -634,6 +651,18 @@ class DOCXParser(BaseParser):
                         # Create filename
                         image_filename = f"image_{self._image_counter:03d}.{format_ext}"
                         image_path = output_path / image_filename
+
+                        # Validate image data with PIL before saving
+                        try:
+                            with Image.open(io.BytesIO(image_bytes)) as img:
+                                # Just opening validates it's a valid image
+                                img.verify()
+                        except Exception as e:
+                            logger.warning(
+                                f"Skipping image {self._image_counter}: invalid image data ({e})"
+                            )
+                            self._warnings.append(f"Skipped invalid image: {e}")
+                            continue
 
                         # Save image
                         with open(image_path, "wb") as f:
