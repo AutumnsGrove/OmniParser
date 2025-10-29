@@ -29,6 +29,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add comprehensive agent prompts for parallel parser development
 - Update CHANGELOG.md
 - Update CHANGELOG.md
+- Update CHANGELOG.md
+
+### Miscellaneous Tasks
+
+- Move files and updated cliff.toml file
+
+## [Unreleased]
+
+### Added
+
+- Add automated changelog generation with git-cliff
+- Add release-please for automated version management
+- **text**: Implement TextParser with encoding detection and chapter detection
+
+### Fixed
+
+- Update changelog workflow to use git-cliff-action v4
+- Configure git-cliff to use prepend mode instead of regenerating changelog
+- Remove conflicting OUTPUT env variable from git-cliff workflow
+- **text**: Fix word count mismatch and implement PR review feedback
+
+### Documentation
+
+- Update CHANGELOG.md
+- Add troubleshooting for changelog content loss and tag requirements
+- Update CHANGELOG.md
+- Update CHANGELOG.md
+- Add comprehensive agent prompts for parallel parser development
+- Update CHANGELOG.md
+- Update CHANGELOG.md
 
 ### Miscellaneous Tasks
 
