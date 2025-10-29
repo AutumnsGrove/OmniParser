@@ -121,11 +121,12 @@ class TextParser(BaseParser):
         1. Detect encoding (or use specified)
         2. Read file with correct encoding
         3. Normalize line endings
-        4. Attempt chapter detection
-        5. If no chapters found, create single chapter
-        6. Apply text cleaning
-        7. Create minimal metadata
-        8. Build and return Document
+        4. Apply text cleaning (before chapter detection for consistent word counts)
+        5. Attempt chapter detection from cleaned text
+        6. If no chapters found, create single chapter
+        7. Filter chapters by minimum length
+        8. Create minimal metadata
+        9. Build and return Document
 
         Args:
             file_path: Path to text file.
@@ -158,7 +159,15 @@ class TextParser(BaseParser):
                 logger.info("Normalizing line endings")
                 text = normalize_line_endings(text)
 
-            # Step 4: Detect chapters or create single chapter
+            # Step 4: Apply text cleaning (if enabled)
+            # NOTE: Text cleaning must happen BEFORE chapter detection to ensure
+            # consistent word counts between document and chapters
+            if self.options.get("clean_text"):
+                logger.info("Cleaning text")
+                text = clean_text(text)
+
+            # Step 5: Detect chapters or create single chapter
+            # Chapters are extracted from cleaned text, ensuring word counts match
             if self.options.get("attempt_chapter_detection"):
                 logger.info("Attempting chapter detection")
                 chapters = self._detect_chapters_from_patterns(text)
@@ -168,13 +177,6 @@ class TextParser(BaseParser):
             else:
                 logger.info("Chapter detection disabled, creating single chapter")
                 chapters = self._create_single_chapter(text)
-
-            # Step 5: Apply text cleaning (if enabled)
-            if self.options.get("clean_text"):
-                logger.info("Cleaning text")
-                text = clean_text(text)
-                for chapter in chapters:
-                    chapter.content = clean_text(chapter.content)
 
             # Step 6: Filter chapters by minimum length
             chapters = self._postprocess_chapters(chapters)
@@ -258,7 +260,11 @@ class TextParser(BaseParser):
             raise ValidationError(f"Empty file: {file_path}")
 
         # Warn if file is very large (>50MB)
-        if file_size > 50 * 1024 * 1024:
+        # This threshold is set conservatively to alert users about potential
+        # performance issues. Text files of this size will still parse successfully
+        # but may take several seconds and consume significant memory.
+        LARGE_FILE_THRESHOLD_MB = 50
+        if file_size > LARGE_FILE_THRESHOLD_MB * 1024 * 1024:
             logger.warning(f"Large text file ({file_size / 1024 / 1024:.1f} MB)")
             self._warnings.append(f"Large file size: {file_size / 1024 / 1024:.1f} MB")
 
