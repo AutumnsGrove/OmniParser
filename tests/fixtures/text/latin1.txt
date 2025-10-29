@@ -1,0 +1,14 @@
+Latin-1 Encoded Document
+
+This document uses Latin-1 (ISO-8859-1) encoding.
+
+Special characters: café, résumé, naïve
+Accented letters: àáâãäå èéêë ìíîï òóôõö ùúûü
+Currency: £ ¥ ¢
+Copyright: © ®
+Fractions: ¼ ½ ¾
+Other: ± × ÷ § ¶
+
+The parser should detect Latin-1 encoding and convert properly.
+
+This tests encoding detection for non-UTF8 files.

@@ -1,0 +1,9 @@
+A Simple Text Document
+
+This is a simple text document with basic content.
+It has multiple paragraphs and some basic structure.
+
+The document contains several sentences across different lines.
+This helps test the basic parsing functionality.
+
+The parser should handle this simple case without any issues.
