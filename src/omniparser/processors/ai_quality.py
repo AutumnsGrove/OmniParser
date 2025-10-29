@@ -92,7 +92,7 @@ def score_quality(
 
     system_prompt = """You are a content quality analyst. Evaluate document quality across multiple dimensions.
 
-Return your assessment in this EXACT format (use exact labels):
+Return your assessment in this EXACT format (use exact labels and follow the structure precisely):
 
 OVERALL_SCORE: [0-100]
 READABILITY: [0-100]
@@ -110,7 +110,25 @@ SUGGESTIONS:
 - [suggestion 2]
 - [suggestion 3]
 
-Be specific and actionable in your suggestions."""
+Be specific and actionable in your suggestions.
+
+Example output:
+
+OVERALL_SCORE: 78
+READABILITY: 82
+STRUCTURE: 75
+COMPLETENESS: 70
+COHERENCE: 85
+
+STRENGTHS:
+- Clear and concise writing style with well-chosen vocabulary
+- Logical flow between sections with smooth transitions
+- Good use of headings and subheadings for organization
+
+SUGGESTIONS:
+- Add more concrete examples to illustrate abstract concepts
+- Expand the conclusion section to better summarize key points
+- Include references or citations to support main arguments"""
 
     user_prompt = f"""Evaluate this document's quality:
 

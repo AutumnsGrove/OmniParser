@@ -47,6 +47,66 @@ MAX_IMAGE_SIZE = 10 * 1024 * 1024
 # Supported image formats
 SUPPORTED_IMAGE_FORMATS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
+# Vision-capable models by provider
+VISION_CAPABLE_MODELS = {
+    # Anthropic Claude
+    "claude-3-opus-20240229",
+    "claude-3-sonnet-20240229",
+    "claude-3-haiku-20240307",
+    "claude-3-5-sonnet-20240620",
+    "claude-3-5-sonnet-20241022",
+    # OpenAI
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-4-vision-preview",
+    "gpt-4-turbo",
+    "gpt-4-turbo-2024-04-09",
+    # Ollama vision models
+    "llava",
+    "llava:latest",
+    "bakllava",
+    "bakllava:latest",
+    "llava-phi3",
+    "llava-phi3:latest",
+    "llava:13b",
+    "llava:34b",
+    # LM Studio (allow any model starting with these prefixes)
+    # LM Studio models checked separately
+}
+
+
+def _is_vision_capable_model(provider: str, model: str) -> bool:
+    """
+    Check if the specified model supports vision/image input.
+
+    Args:
+        provider: AI provider name (anthropic, openai, ollama, etc.).
+        model: Model identifier.
+
+    Returns:
+        True if model supports vision, False otherwise.
+    """
+    # Check exact match first
+    if model in VISION_CAPABLE_MODELS:
+        return True
+
+    # For LM Studio, we can't reliably determine vision capability
+    # so we allow it but warn the user
+    if provider == "lmstudio":
+        logger.warning(
+            f"Cannot verify vision capability for LM Studio model '{model}'. "
+            f"Ensure you're using a vision-capable model (e.g., LLaVA)."
+        )
+        return True
+
+    # For Ollama, check if model name contains known vision model names
+    if provider == "ollama":
+        vision_prefixes = ["llava", "bakllava"]
+        if any(model.startswith(prefix) for prefix in vision_prefixes):
+            return True
+
+    return False
+
 
 @dataclass
 class ImageAnalysis:
@@ -161,9 +221,20 @@ def analyze_image(
         logger.error(f"Failed to initialize AI config: {e}")
         raise
 
+    # Validate that the model supports vision before loading the image
+    if not _is_vision_capable_model(ai_config.provider.value, ai_config.model):
+        raise ValueError(
+            f"Model '{ai_config.model}' from provider '{ai_config.provider.value}' "
+            f"does not support vision/image input. "
+            f"Please use a vision-capable model such as:\n"
+            f"  - Anthropic: claude-3-opus-20240229, claude-3-sonnet-20240229\n"
+            f"  - OpenAI: gpt-4o, gpt-4-vision-preview\n"
+            f"  - Ollama: llava:latest, bakllava:latest"
+        )
+
     system_prompt = """You are an expert image analyst. Analyze images comprehensively.
 
-Return your analysis in this EXACT format:
+Return your analysis in this EXACT format (follow the structure precisely):
 
 TEXT_CONTENT:
 [Any text visible in the image, or "None" if no text]
@@ -183,7 +254,32 @@ ALT_TEXT:
 [Concise alt text suitable for accessibility, under 150 characters]
 
 CONFIDENCE:
-[Your confidence in this analysis: high/medium/low]"""
+[Your confidence in this analysis: high/medium/low]
+
+Example output for a flowchart:
+
+TEXT_CONTENT:
+Start -> Process Data -> Decision? -> Yes -> Output -> End, No -> Return to Process
+
+IMAGE_TYPE:
+flowchart
+
+DESCRIPTION:
+A detailed flowchart diagram showing a data processing workflow. The diagram uses rectangular boxes for processes, a diamond shape for the decision point, and arrows connecting the elements. Colors are blue for processes and green for the decision diamond.
+
+OBJECTS:
+- Start node
+- Process Data box
+- Decision diamond
+- Output box
+- End node
+- Connecting arrows
+
+ALT_TEXT:
+Flowchart diagram showing data processing workflow with decision point
+
+CONFIDENCE:
+high"""
 
     user_prompt = """Analyze this image comprehensively. Extract any text, classify the image type,
 describe the content in detail, list main objects/elements, and generate alt text.
@@ -400,46 +496,88 @@ def _parse_analysis_response(response: str, image_path: str) -> ImageAnalysis:
 
 
 def analyze_images_batch(
-    image_paths: List[str], ai_options: Optional[Dict[str, Any]] = None
+    image_paths: List[str],
+    ai_options: Optional[Dict[str, Any]] = None,
+    batch_size: int = 10,
+    progress_callback: Optional[callable] = None,
 ) -> List[ImageAnalysis]:
     """
-    Analyze multiple images in batch.
+    Analyze multiple images in batches with memory management.
+
+    Processes images in configurable batch sizes to manage memory usage
+    when analyzing large numbers of images (100+).
 
     Args:
         image_paths: List of image file paths to analyze.
         ai_options: AI configuration options.
+        batch_size: Number of images to process at a time (default: 10).
+                   Lower values use less memory but take longer.
+        progress_callback: Optional callback function(completed, total) for progress tracking.
 
     Returns:
         List of ImageAnalysis objects (one per image).
 
     Memory Usage:
-        Each image is processed sequentially to avoid excessive memory usage.
-        Images are loaded, encoded to base64 (~33% size increase), sent to API,
-        then released from memory before processing the next image.
+        Images are processed in batches to manage memory usage:
+        - Each image: ~10MB max + ~33% base64 encoding overhead = ~13MB
+        - Batch of 10: ~130MB peak memory
+        - For 100+ images, consider batch_size=5 to reduce memory footprint
 
     Example:
+        >>> # Analyze 3 images
         >>> images = ["fig1.png", "fig2.png", "fig3.png"]
         >>> analyses = analyze_images_batch(images)
         >>> for analysis in analyses:
         ...     print(f"{analysis.image_path}: {analysis.image_type}")
+
+        >>> # Process 100+ images with smaller batches for memory control
+        >>> large_image_set = [f"img_{i}.png" for i in range(150)]
+        >>> analyses = analyze_images_batch(large_image_set, batch_size=5)
+
+        >>> # Track progress with callback
+        >>> def show_progress(completed, total):
+        ...     print(f"Analyzed {completed}/{total} images")
+        >>> analyses = analyze_images_batch(images, progress_callback=show_progress)
     """
+    if batch_size < 1:
+        raise ValueError("batch_size must be at least 1")
+
     results = []
+    total_images = len(image_paths)
 
-    for image_path in image_paths:
-        try:
-            analysis = analyze_image(image_path, ai_options)
-            results.append(analysis)
-        except Exception as e:
-            logger.error(f"Failed to analyze {image_path}: {e}")
-            # Add failed analysis
-            results.append(
-                ImageAnalysis(
-                    image_path=image_path,
-                    description=f"[Analysis failed: {str(e)}]",
+    # Process images in batches
+    for batch_start in range(0, total_images, batch_size):
+        batch_end = min(batch_start + batch_size, total_images)
+        batch_paths = image_paths[batch_start:batch_end]
+
+        logger.info(
+            f"Processing batch {batch_start // batch_size + 1} "
+            f"({batch_start + 1}-{batch_end} of {total_images})"
+        )
+
+        # Process each image in current batch
+        for image_path in batch_paths:
+            try:
+                analysis = analyze_image(image_path, ai_options)
+                results.append(analysis)
+            except Exception as e:
+                logger.error(f"Failed to analyze {image_path}: {e}")
+                # Add failed analysis
+                results.append(
+                    ImageAnalysis(
+                        image_path=image_path,
+                        description=f"[Analysis failed: {str(e)}]",
+                    )
                 )
-            )
 
-    logger.info(f"Analyzed {len(results)} images")
+            # Report progress if callback provided
+            if progress_callback:
+                progress_callback(len(results), total_images)
+
+        # Log batch completion
+        logger.info(f"Batch complete: {len(results)}/{total_images} images processed")
+
+    logger.info(f"All batches complete: analyzed {len(results)} images")
     return results
 
 

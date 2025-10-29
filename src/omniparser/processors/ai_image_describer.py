@@ -43,6 +43,64 @@ MAX_IMAGE_SIZE = 10 * 1024 * 1024
 # Supported image formats
 SUPPORTED_IMAGE_FORMATS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
+# Vision-capable models by provider
+VISION_CAPABLE_MODELS = {
+    # Anthropic Claude
+    "claude-3-opus-20240229",
+    "claude-3-sonnet-20240229",
+    "claude-3-haiku-20240307",
+    "claude-3-5-sonnet-20240620",
+    "claude-3-5-sonnet-20241022",
+    # OpenAI
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-4-vision-preview",
+    "gpt-4-turbo",
+    "gpt-4-turbo-2024-04-09",
+    # Ollama vision models
+    "llava",
+    "llava:latest",
+    "bakllava",
+    "bakllava:latest",
+    "llava-phi3",
+    "llava-phi3:latest",
+    "llava:13b",
+    "llava:34b",
+}
+
+
+def _is_vision_capable_model(provider: str, model: str) -> bool:
+    """
+    Check if the specified model supports vision/image input.
+
+    Args:
+        provider: AI provider name (anthropic, openai, ollama, etc.).
+        model: Model identifier.
+
+    Returns:
+        True if model supports vision, False otherwise.
+    """
+    # Check exact match first
+    if model in VISION_CAPABLE_MODELS:
+        return True
+
+    # For LM Studio, we can't reliably determine vision capability
+    # so we allow it but warn the user
+    if provider == "lmstudio":
+        logger.warning(
+            f"Cannot verify vision capability for LM Studio model '{model}'. "
+            f"Ensure you're using a vision-capable model (e.g., LLaVA)."
+        )
+        return True
+
+    # For Ollama, check if model name contains known vision model names
+    if provider == "ollama":
+        vision_prefixes = ["llava", "bakllava"]
+        if any(model.startswith(prefix) for prefix in vision_prefixes):
+            return True
+
+    return False
+
 
 def describe_image(
     image: ImageReference,
@@ -117,6 +175,17 @@ def describe_image(
     except (ValueError, ImportError) as e:
         logger.error(f"Failed to initialize AI config: {e}")
         raise
+
+    # Validate that the model supports vision before loading the image
+    if not _is_vision_capable_model(ai_config.provider.value, ai_config.model):
+        raise ValueError(
+            f"Model '{ai_config.model}' from provider '{ai_config.provider.value}' "
+            f"does not support vision/image input. "
+            f"Please use a vision-capable model such as:\n"
+            f"  - Anthropic: claude-3-opus-20240229, claude-3-sonnet-20240229\n"
+            f"  - OpenAI: gpt-4o, gpt-4-vision-preview\n"
+            f"  - Ollama: llava:latest, bakllava:latest"
+        )
 
     # Build prompt
     system_prompt = (
