@@ -15,24 +15,74 @@ Features:
 - Integration with shared processors (chapter_detector, text_cleaner)
 """
 
+# Standard library imports
 import io
 import logging
+import signal
 import statistics
 import tempfile
 import time
 import uuid
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+# Third-party imports
 import fitz  # PyMuPDF
 from PIL import Image
 
+# Local imports
 from ..base.base_parser import BaseParser
 from ..exceptions import FileReadError, ParsingError, ValidationError
 from ..models import Chapter, Document, ImageReference, Metadata, ProcessingInfo
 
 logger = logging.getLogger(__name__)
+
+# Constants
+SCANNED_PDF_THRESHOLD = 100  # Character count below which to trigger OCR
+OCR_DPI = 300  # DPI for OCR processing
+HEADING_SEARCH_WINDOW = 100  # Character window for heading text search
+READING_SPEED_WPM = 250  # Words per minute for reading time estimation
+DEFAULT_OCR_TIMEOUT = 300  # Default OCR timeout in seconds (5 minutes)
+DEFAULT_MAX_HEADING_WORDS = 25  # Default maximum words in heading
+MIN_TABLE_ROWS = 2  # Minimum table rows for extraction
+MIN_IMAGE_SIZE = 100  # Minimum image dimension in pixels
+
+
+@contextmanager
+def timeout_context(seconds: int):
+    """
+    Context manager for enforcing timeouts using signals.
+
+    Args:
+        seconds: Maximum execution time in seconds.
+
+    Raises:
+        TimeoutError: If execution exceeds timeout.
+
+    Note:
+        Only works on Unix-like systems. On Windows, timeout is not enforced.
+    """
+
+    def timeout_handler(signum, frame):
+        raise TimeoutError(f"Operation timed out after {seconds} seconds")
+
+    # Signal-based timeout only works on Unix-like systems
+    if hasattr(signal, "SIGALRM"):
+        old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(seconds)
+        try:
+            yield
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old_handler)
+    else:
+        # On Windows, no timeout enforcement (log warning)
+        logger.warning(
+            "Timeout not enforced on this platform (signal.SIGALRM not available)"
+        )
+        yield
 
 
 class PDFParser(BaseParser):
@@ -104,7 +154,16 @@ class PDFParser(BaseParser):
         """
         super().__init__(options)
 
-        # Set default options
+        # Check PyMuPDF version for table extraction support
+        fitz_version = tuple(map(int, fitz.version[0].split(".")))
+        self._table_extraction_supported = fitz_version >= (1, 18, 0)
+        if not self._table_extraction_supported:
+            logger.warning(
+                f"PyMuPDF version {fitz.version[0]} does not support table extraction. "
+                "Tables will not be extracted. Please upgrade to 1.18.0 or later."
+            )
+
+        # Set default options (using module constants)
         self.options.setdefault("extract_images", True)
         self.options.setdefault("image_output_dir", None)
         self.options.setdefault("ocr_enabled", True)
@@ -118,8 +177,8 @@ class PDFParser(BaseParser):
         self.options.setdefault("include_page_breaks", False)
         self.options.setdefault("max_pages", None)
         self.options.setdefault("max_images", None)
-        self.options.setdefault("ocr_timeout", 300)
-        self.options.setdefault("max_heading_words", 25)
+        self.options.setdefault("ocr_timeout", DEFAULT_OCR_TIMEOUT)
+        self.options.setdefault("max_heading_words", DEFAULT_MAX_HEADING_WORDS)
 
         # Initialize tracking
         self._warnings: List[str] = []
@@ -347,7 +406,7 @@ class PDFParser(BaseParser):
         Strategy:
         - Sample first 3 pages (or all if < 3)
         - Count extracted text characters
-        - If < 100 chars per page on average, consider scanned
+        - If < SCANNED_PDF_THRESHOLD chars per page on average, consider scanned
 
         Args:
             doc: PyMuPDF document object
@@ -365,13 +424,14 @@ class PDFParser(BaseParser):
 
         avg_chars_per_page = total_chars / sample_pages if sample_pages > 0 else 0
 
-        # Threshold: < 100 chars per page suggests scanned PDF
-        is_scanned = avg_chars_per_page < 100
+        # Threshold: < SCANNED_PDF_THRESHOLD chars per page suggests scanned PDF
+        is_scanned = avg_chars_per_page < SCANNED_PDF_THRESHOLD
 
         if is_scanned:
             logger.info(
                 f"PDF appears to be scanned "
-                f"(avg {avg_chars_per_page:.0f} chars/page)"
+                f"(avg {avg_chars_per_page:.0f} chars/page, "
+                f"threshold={SCANNED_PDF_THRESHOLD})"
             )
         else:
             logger.info(
@@ -399,6 +459,7 @@ class PDFParser(BaseParser):
         """
         full_text = []
         text_blocks = []
+        current_position = 0  # Track position incrementally (O(1) instead of O(n²))
 
         # Apply page limit if specified
         max_pages = self.options.get("max_pages")
@@ -430,22 +491,26 @@ class PDFParser(BaseParser):
                         # Check if bold (flag 16 is bold in PyMuPDF)
                         is_bold = bool(font_flags & 16) or "Bold" in font_name
 
-                        # Store text block info
+                        # Store text block info with incremental position
                         text_blocks.append(
                             {
                                 "text": text,
                                 "font_size": font_size,
                                 "is_bold": is_bold,
                                 "page_num": page_num + 1,
-                                "position": len(" ".join(full_text)),
+                                "position": current_position,
                             }
                         )
 
                         full_text.append(text)
+                        # Update position: add text length + 1 for space separator
+                        current_position += len(text) + 1
 
             # Add page break marker (if enabled)
             if self.options.get("include_page_breaks", False):
-                full_text.append(f"\n\n--- Page {page_num + 1} ---\n\n")
+                page_marker = f"\n\n--- Page {page_num + 1} ---\n\n"
+                full_text.append(page_marker)
+                current_position += len(page_marker) + 1
 
         return " ".join(full_text), text_blocks
 
@@ -455,7 +520,7 @@ class PDFParser(BaseParser):
 
         Process:
         1. Convert each page to PIL Image
-        2. Run Tesseract OCR
+        2. Run Tesseract OCR (with timeout enforcement)
         3. Combine results
         4. Add page markers
 
@@ -464,6 +529,9 @@ class PDFParser(BaseParser):
 
         Returns:
             OCR-extracted text
+
+        Raises:
+            TimeoutError: If OCR processing exceeds configured timeout
         """
         try:
             import pytesseract
@@ -474,28 +542,39 @@ class PDFParser(BaseParser):
 
         full_text = []
         language = self.options.get("ocr_language", "eng")
+        ocr_timeout = self.options.get("ocr_timeout", DEFAULT_OCR_TIMEOUT)
 
         # Apply page limit if specified
         max_pages = self.options.get("max_pages")
         num_pages = min(len(doc), max_pages) if max_pages else len(doc)
 
-        for page_num in range(num_pages):
-            page = doc[page_num]
+        # Wrap OCR processing in timeout context
+        try:
+            with timeout_context(ocr_timeout):
+                for page_num in range(num_pages):
+                    page = doc[page_num]
 
-            # Convert page to image
-            pix = page.get_pixmap(dpi=300)  # High DPI for better OCR
-            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                    # Convert page to image
+                    pix = page.get_pixmap(dpi=OCR_DPI)
+                    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
 
-            # Run OCR
-            try:
-                text = pytesseract.image_to_string(img, lang=language)
-                full_text.append(text.strip())
-                # Add page break marker (if enabled)
-                if self.options.get("include_page_breaks", False):
-                    full_text.append(f"\n\n--- Page {page_num + 1} ---\n\n")
-            except Exception as e:
-                logger.warning(f"OCR failed on page {page_num + 1}: {e}")
-                self._warnings.append(f"OCR failed on page {page_num + 1}")
+                    # Run OCR
+                    try:
+                        text = pytesseract.image_to_string(img, lang=language)
+                        full_text.append(text.strip())
+                        # Add page break marker (if enabled)
+                        if self.options.get("include_page_breaks", False):
+                            full_text.append(f"\n\n--- Page {page_num + 1} ---\n\n")
+                    except Exception as e:
+                        logger.warning(f"OCR failed on page {page_num + 1}: {e}")
+                        self._warnings.append(f"OCR failed on page {page_num + 1}")
+        except TimeoutError as e:
+            logger.error(f"OCR processing timed out: {e}")
+            raise ParsingError(
+                f"OCR processing exceeded timeout of {ocr_timeout} seconds",
+                parser="PDFParser",
+                original_error=e,
+            )
 
         return "\n".join(full_text)
 
@@ -620,8 +699,10 @@ class PDFParser(BaseParser):
 
             # Search for the heading text near the approximate position
             # Use a window around the position to account for minor discrepancies
-            search_start = max(0, approx_position - 100)
-            search_end = min(len(result), approx_position + len(heading_text) + 100)
+            search_start = max(0, approx_position - HEADING_SEARCH_WINDOW)
+            search_end = min(
+                len(result), approx_position + len(heading_text) + HEADING_SEARCH_WINDOW
+            )
             search_region = result[search_start:search_end]
 
             # Find the heading text in the search region
@@ -807,14 +888,28 @@ class PDFParser(BaseParser):
                     with open(image_path, "wb") as img_file:
                         img_file.write(image_data)
 
-                    # Get image dimensions
+                    # Verify and get image dimensions
                     try:
+                        # First pass: verify image is valid
+                        with Image.open(io.BytesIO(image_data)) as pil_img:
+                            pil_img.verify()  # Verify image integrity
+
+                        # Second pass: get dimensions (verify() closes the image)
                         with Image.open(io.BytesIO(image_data)) as pil_img:
                             width, height = pil_img.size
                             size = (width, height)
+
+                            # Filter out tiny images (likely noise/artifacts)
+                            if width < MIN_IMAGE_SIZE or height < MIN_IMAGE_SIZE:
+                                logger.debug(
+                                    f"Skipping small image ({width}x{height}) "
+                                    f"on page {page_num + 1}"
+                                )
+                                continue
+
                     except (IOError, OSError, Image.UnidentifiedImageError) as e:
-                        logger.debug(f"Failed to get image size: {e}")
-                        size = None
+                        logger.debug(f"Failed to verify/process image: {e}")
+                        continue
 
                     # Create ImageReference
                     img_ref = ImageReference(
@@ -842,6 +937,7 @@ class PDFParser(BaseParser):
         Extract tables and convert to markdown format.
 
         Note: PyMuPDF has basic table detection via page.find_tables()
+        Requires PyMuPDF version 1.18.0 or later.
 
         Args:
             doc: PyMuPDF document object
@@ -849,6 +945,11 @@ class PDFParser(BaseParser):
         Returns:
             List of markdown-formatted tables
         """
+        # Check if table extraction is supported in this PyMuPDF version
+        if not self._table_extraction_supported:
+            logger.debug("Table extraction not supported in this PyMuPDF version")
+            return []
+
         tables = []
 
         for page_num in range(len(doc)):
@@ -905,7 +1006,7 @@ class PDFParser(BaseParser):
         if not table_data:
             return ""
 
-        if len(table_data) < 2:
+        if len(table_data) < MIN_TABLE_ROWS:
             # Single-row table (just headers) - likely not a real table
             logger.debug(f"Discarding single-row table: {table_data[0]}")
             return ""
@@ -940,7 +1041,7 @@ class PDFParser(BaseParser):
     def _estimate_reading_time(self, word_count: int) -> int:
         """Estimate reading time in minutes.
 
-        Uses average reading speed of 250 words per minute.
+        Uses average reading speed of READING_SPEED_WPM words per minute.
 
         Args:
             word_count: Number of words.
@@ -948,4 +1049,4 @@ class PDFParser(BaseParser):
         Returns:
             Estimated reading time in minutes.
         """
-        return max(1, word_count // 250)
+        return max(1, word_count // READING_SPEED_WPM)
