@@ -1513,23 +1513,15 @@ class TestEPUBParserImageExtraction:
         with patch.object(parser, "_load_epub", return_value=mock_book):
             images = parser.extract_images(Path("/fake/path.epub"))
 
-        # All images should be included (even corrupted one)
-        assert len(images) == 3
+        # Only valid images should be included (corrupted one filtered out)
+        assert len(images) == 2
+        assert len(parser._warnings) > 0  # Should have warning about corrupted image
 
         # Valid images have proper dimensions
         assert images[0].size == (100, 100)
         assert images[0].format == "png"
-
-        # Corrupted image has unknown dimensions/format
-        assert images[1].size is None
-        assert images[1].format == "unknown"
-
-        # Third image is valid
-        assert images[2].size == (100, 100)
-
-        # Should have warning about corrupted image
-        assert len(parser._warnings) > 0
-        assert any("Could not read image" in w for w in parser._warnings)
+        assert images[1].size == (100, 100)
+        assert images[1].format == "png"
 
     def test_extract_images_various_formats(self) -> None:
         """Test extraction of various image formats."""

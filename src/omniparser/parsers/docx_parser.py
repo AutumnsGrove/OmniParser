@@ -648,8 +648,9 @@ class DOCXParser(BaseParser):
                         image_bytes = image_part.blob
 
                         # Validate image data using shared utility
+                        # Note: No minimum size for DOCX - icons and small graphics are valid
                         is_valid, error = validate_image_data(
-                            image_bytes, max_size=MAX_IMAGE_SIZE
+                            image_bytes, min_size=1, max_size=MAX_IMAGE_SIZE
                         )
                         if not is_valid:
                             logger.warning(

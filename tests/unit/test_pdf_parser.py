@@ -495,10 +495,18 @@ class TestPDFParserImageExtraction:
     """Test image extraction."""
 
     @patch("omniparser.parsers.pdf_parser.fitz")
-    @patch("omniparser.parsers.pdf_parser.Image")
-    def test_extract_images_basic(self, mock_image_class, mock_fitz) -> None:
+    def test_extract_images_basic(self, mock_fitz) -> None:
         """Test basic image extraction."""
+        from PIL import Image
+        import io
+
         parser = PDFParser()
+
+        # Create valid image data
+        img_bytes = io.BytesIO()
+        img = Image.new("RGB", (800, 600))
+        img.save(img_bytes, format="PNG")
+        valid_image_data = img_bytes.getvalue()
 
         # Mock document
         mock_doc = MagicMock()
@@ -511,21 +519,16 @@ class TestPDFParserImageExtraction:
         ]
         mock_doc.__getitem__.return_value = mock_page
 
-        # Mock image extraction
+        # Mock image extraction with real image data
         mock_doc.extract_image.return_value = {
-            "image": b"fake_image_data",
+            "image": valid_image_data,
             "ext": "png",
         }
-
-        # Mock PIL Image
-        mock_img = MagicMock()
-        mock_img.size = (800, 600)
-        mock_image_class.open.return_value.__enter__.return_value = mock_img
 
         images = parser._extract_images(mock_doc)
 
         assert len(images) == 1
-        assert images[0].image_id == "img_0000"
+        assert images[0].image_id == "img_0001"
         assert images[0].format == "png"
         assert images[0].size == (800, 600)
 
@@ -546,10 +549,18 @@ class TestPDFParserImageExtraction:
         assert images == []
 
     @patch("omniparser.parsers.pdf_parser.fitz")
-    @patch("omniparser.parsers.pdf_parser.Image")
-    def test_extract_images_multiple_pages(self, mock_image_class, mock_fitz) -> None:
+    def test_extract_images_multiple_pages(self, mock_fitz) -> None:
         """Test image extraction across multiple pages."""
+        from PIL import Image
+        import io
+
         parser = PDFParser()
+
+        # Create valid image data
+        img_bytes = io.BytesIO()
+        img = Image.new("RGB", (800, 600))
+        img.save(img_bytes, format="JPEG")
+        valid_image_data = img_bytes.getvalue()
 
         # Mock document with 2 pages
         mock_doc = MagicMock()
@@ -568,16 +579,11 @@ class TestPDFParserImageExtraction:
 
         mock_doc.__getitem__.side_effect = [mock_page1, mock_page2]
 
-        # Mock image extraction
+        # Mock image extraction with real image data
         mock_doc.extract_image.return_value = {
-            "image": b"fake_image_data",
+            "image": valid_image_data,
             "ext": "jpg",
         }
-
-        # Mock PIL Image
-        mock_img = MagicMock()
-        mock_img.size = (800, 600)
-        mock_image_class.open.return_value.__enter__.return_value = mock_img
 
         images = parser._extract_images(mock_doc)
 

@@ -982,8 +982,8 @@ class EPUBParser(BaseParser):
                 image_name = item.get_name()  # e.g., "images/cover.jpg"
                 image_content = item.get_content()  # bytes
 
-                # Validate image data
-                is_valid, error = validate_image_data(image_content)
+                # Validate image data (no minimum size for EPUB - icons can be small)
+                is_valid, error = validate_image_data(image_content, min_size=1)
                 if not is_valid:
                     logger.warning(f"Skipping invalid image {image_name}: {error}")
                     self._warnings.append(f"Skipped invalid image {image_name}: {error}")
