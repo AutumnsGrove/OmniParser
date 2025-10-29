@@ -1,0 +1,7 @@
+This is a plain text document without any clear chapter structure. It contains several paragraphs of text that flow continuously without section markers or chapter headings. The content is unstructured and should be treated as a single chapter by the parser.
+
+The document discusses various topics in a free-flowing manner. There are no clear divisions or section breaks that would indicate separate chapters. This type of document is common for notes, articles, or stream-of-consciousness writing.
+
+Even though the text continues for multiple paragraphs, there are no markers that would trigger the chapter detection patterns. The parser should recognize this and create a single chapter containing all the content.
+
+This tests the fallback behavior when no chapter structure is detected. The parser should handle this gracefully and still produce a valid document with a single chapter.

@@ -1,0 +1,9 @@
+Windows Line Endings
+
+This file uses Windows-style CRLF line endings.
+Each line ends with both carriage return and line feed characters.
+
+The parser should normalize these to Unix-style line endings.
+This is important for consistent text processing across platforms.
+
+Testing line ending normalization is critical.
