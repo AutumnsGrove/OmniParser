@@ -40,6 +40,9 @@ logger = logging.getLogger(__name__)
 # Maximum image file size in bytes (10MB)
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
 
+# Supported image formats
+SUPPORTED_IMAGE_FORMATS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
 
 def describe_image(
     image: ImageReference,
@@ -59,8 +62,14 @@ def describe_image(
 
     Raises:
         ValueError: If image file_path is None or file doesn't exist.
+        ValueError: If image file exceeds 10MB size limit.
+        ValueError: If image format is not supported.
         ValueError: If AI provider/model doesn't support vision.
         Exception: If AI API call fails.
+
+    Memory Usage:
+        Images are loaded into memory and base64-encoded (~33% size increase).
+        Maximum supported image size is 10MB to prevent memory issues.
 
     Example:
         >>> img = ImageReference(
@@ -87,6 +96,13 @@ def describe_image(
     image_path = Path(image.file_path)
     if not image_path.exists():
         raise ValueError(f"Image file not found: {image.file_path}")
+
+    # Validate image format
+    if image_path.suffix.lower() not in SUPPORTED_IMAGE_FORMATS:
+        raise ValueError(
+            f"Unsupported image format: {image_path.suffix}. "
+            f"Supported formats: {', '.join(sorted(SUPPORTED_IMAGE_FORMATS))}"
+        )
 
     # Check file size to avoid memory issues
     file_size = image_path.stat().st_size
@@ -242,6 +258,11 @@ def describe_document_images(
 
     Returns:
         Dictionary mapping image_id to description.
+
+    Memory Usage:
+        Each image is processed sequentially to avoid excessive memory usage.
+        Images are loaded, encoded to base64 (~33% size increase), sent to API,
+        then released from memory before processing the next image.
 
     Example:
         >>> doc = parse_document("illustrated_book.epub")

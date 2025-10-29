@@ -100,8 +100,16 @@ def analyze_image(
 
     Raises:
         ValueError: If image file doesn't exist.
+        ValueError: If image file exceeds 10MB size limit.
+        ValueError: If image format is not supported.
         ValueError: If AI provider/model doesn't support vision.
         Exception: If AI API call fails.
+
+    Memory Usage:
+        Images are loaded into memory and base64-encoded (~33% size increase).
+        Maximum supported image size is 10MB to prevent memory issues.
+        For documents with many images, consider processing in batches
+        using analyze_images_batch() to manage memory consumption.
 
     Example:
         >>> # Analyze a diagram from a PDF
@@ -403,6 +411,11 @@ def analyze_images_batch(
 
     Returns:
         List of ImageAnalysis objects (one per image).
+
+    Memory Usage:
+        Each image is processed sequentially to avoid excessive memory usage.
+        Images are loaded, encoded to base64 (~33% size increase), sent to API,
+        then released from memory before processing the next image.
 
     Example:
         >>> images = ["fig1.png", "fig2.png", "fig3.png"]
