@@ -33,6 +33,11 @@ class TestPDFParserInit:
             "detect_chapters": True,
             "min_chapter_level": 1,
             "max_chapter_level": 2,
+            "include_page_breaks": False,
+            "max_pages": None,
+            "max_images": None,
+            "ocr_timeout": 300,
+            "max_heading_words": 25,
         }
 
     def test_init_with_options(self) -> None:
@@ -258,7 +263,7 @@ class TestPDFParserTextExtraction:
         text = parser._extract_text_with_ocr(mock_doc)
 
         assert "OCR extracted text" in text
-        assert "Page 1" in text
+        # Page markers are not included by default (include_page_breaks=False)
         mock_tesseract.assert_called()
 
 

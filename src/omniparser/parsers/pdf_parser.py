@@ -50,13 +50,20 @@ class PDFParser(BaseParser):
         extract_images (bool): Extract embedded images (default: True)
         image_output_dir (Path): Directory for extracted images (default: temp)
         ocr_enabled (bool): Enable OCR for scanned PDFs (default: True)
-        ocr_language (str): Tesseract language code (default: 'eng')
+        ocr_language (str): Tesseract language code (default: 'eng').
+            For non-English PDFs, specify the appropriate language code
+            (e.g., 'fra' for French, 'deu' for German).
         min_heading_size (float): Minimum font size for headings (default: auto-detect)
         extract_tables (bool): Extract and convert tables (default: True)
         clean_text (bool): Apply text cleaning (default: True)
         detect_chapters (bool): Enable chapter detection (default: True)
         min_chapter_level (int): Minimum heading level for chapters (default: 1)
         max_chapter_level (int): Maximum heading level for chapters (default: 2)
+        include_page_breaks (bool): Include page break markers in content (default: False)
+        max_pages (int): Maximum number of pages to process (default: None = all pages)
+        max_images (int): Maximum number of images to extract (default: None = all images)
+        ocr_timeout (int): Timeout for OCR operations in seconds (default: 300)
+        max_heading_words (int): Maximum words in a heading (default: 25)
 
     Example:
         >>> parser = PDFParser({'extract_images': True, 'ocr_enabled': True})
@@ -84,6 +91,11 @@ class PDFParser(BaseParser):
         self.options.setdefault("detect_chapters", True)
         self.options.setdefault("min_chapter_level", 1)
         self.options.setdefault("max_chapter_level", 2)
+        self.options.setdefault("include_page_breaks", False)
+        self.options.setdefault("max_pages", None)
+        self.options.setdefault("max_images", None)
+        self.options.setdefault("ocr_timeout", 300)
+        self.options.setdefault("max_heading_words", 25)
 
         # Initialize tracking
         self._warnings: List[str] = []
@@ -137,30 +149,39 @@ class PDFParser(BaseParser):
         self._start_time = time.time()
         self._warnings = []
 
+        pdf_doc = None
         try:
             # Step 1: Validate PDF file
             self._validate_pdf(file_path)
 
             # Step 2: Load PDF with PyMuPDF
             logger.info(f"Loading PDF: {file_path}")
-            doc = self._load_pdf(file_path)
+            pdf_doc = self._load_pdf(file_path)
+
+            # Check page limit
+            max_pages = self.options.get("max_pages")
+            if max_pages and len(pdf_doc) > max_pages:
+                logger.warning(f"PDF has {len(pdf_doc)} pages, limiting to {max_pages}")
+                self._warnings.append(
+                    f"PDF truncated: {len(pdf_doc)} pages > max_pages ({max_pages})"
+                )
 
             # Step 3: Extract metadata
             logger.info("Extracting metadata")
-            metadata = self._extract_metadata(doc, file_path)
+            metadata = self._extract_metadata(pdf_doc, file_path)
 
             # Step 4: Detect if scanned PDF
             logger.info("Detecting PDF type (text-based vs scanned)")
-            is_scanned = self._is_scanned_pdf(doc)
+            is_scanned = self._is_scanned_pdf(pdf_doc)
 
             # Step 5: Extract text
             logger.info("Extracting text content")
             if is_scanned and self.options.get("ocr_enabled"):
                 logger.info("Using OCR for scanned PDF")
-                content = self._extract_text_with_ocr(doc)
+                content = self._extract_text_with_ocr(pdf_doc)
                 text_blocks = []  # OCR doesn't provide font info
             else:
-                content, text_blocks = self._extract_text_with_formatting(doc)
+                content, text_blocks = self._extract_text_with_formatting(pdf_doc)
 
             # Step 6: Detect headings and convert to markdown
             chapters: List[Chapter] = []
@@ -182,7 +203,7 @@ class PDFParser(BaseParser):
             if self.options.get("extract_images"):
                 logger.info("Extracting images")
                 try:
-                    images = self._extract_images(doc)
+                    images = self._extract_images(pdf_doc)
                 except Exception as e:
                     logger.warning(f"Image extraction failed: {e}")
                     self._warnings.append(f"Image extraction failed: {e}")
@@ -191,7 +212,7 @@ class PDFParser(BaseParser):
             if self.options.get("extract_tables"):
                 logger.info("Extracting tables")
                 try:
-                    tables = self._extract_tables(doc)
+                    tables = self._extract_tables(pdf_doc)
                     if tables:
                         # Append tables to content
                         content += "\n\n" + "\n\n".join(tables)
@@ -233,13 +254,6 @@ class PDFParser(BaseParser):
                 estimated_reading_time=reading_time,
             )
 
-            # Close PDF document
-            doc.close()
-
-            # Cleanup temp directory if used
-            if self._temp_dir:
-                self._temp_dir.cleanup()
-
             logger.info(
                 f"PDF parsing complete: {word_count} words, "
                 f"{len(chapters)} chapters, {len(images)} images"
@@ -251,6 +265,20 @@ class PDFParser(BaseParser):
             raise FileReadError(f"Failed to read PDF file: {e}")
         except Exception as e:
             raise ParsingError(f"PDF parsing failed: {e}", parser="PDFParser")
+        finally:
+            # Always cleanup resources, even if an exception occurred
+            if pdf_doc is not None:
+                try:
+                    pdf_doc.close()
+                except Exception as e:
+                    logger.warning(f"Error closing PDF document: {e}")
+
+            if self._temp_dir is not None:
+                try:
+                    self._temp_dir.cleanup()
+                    self._temp_dir = None
+                except Exception as e:
+                    logger.warning(f"Error cleaning up temp directory: {e}")
 
     def _validate_pdf(self, file_path: Path) -> None:
         """Validate PDF file exists and is readable.
@@ -348,7 +376,11 @@ class PDFParser(BaseParser):
         full_text = []
         text_blocks = []
 
-        for page_num in range(len(doc)):
+        # Apply page limit if specified
+        max_pages = self.options.get("max_pages")
+        num_pages = min(len(doc), max_pages) if max_pages else len(doc)
+
+        for page_num in range(num_pages):
             page = doc[page_num]
 
             # Get text blocks with font information
@@ -387,8 +419,9 @@ class PDFParser(BaseParser):
 
                         full_text.append(text)
 
-            # Add page break marker
-            full_text.append(f"\n\n--- Page {page_num + 1} ---\n\n")
+            # Add page break marker (if enabled)
+            if self.options.get("include_page_breaks", False):
+                full_text.append(f"\n\n--- Page {page_num + 1} ---\n\n")
 
         return " ".join(full_text), text_blocks
 
@@ -418,7 +451,11 @@ class PDFParser(BaseParser):
         full_text = []
         language = self.options.get("ocr_language", "eng")
 
-        for page_num in range(len(doc)):
+        # Apply page limit if specified
+        max_pages = self.options.get("max_pages")
+        num_pages = min(len(doc), max_pages) if max_pages else len(doc)
+
+        for page_num in range(num_pages):
             page = doc[page_num]
 
             # Convert page to image
@@ -429,7 +466,9 @@ class PDFParser(BaseParser):
             try:
                 text = pytesseract.image_to_string(img, lang=language)
                 full_text.append(text.strip())
-                full_text.append(f"\n\n--- Page {page_num + 1} ---\n\n")
+                # Add page break marker (if enabled)
+                if self.options.get("include_page_breaks", False):
+                    full_text.append(f"\n\n--- Page {page_num + 1} ---\n\n")
             except Exception as e:
                 logger.warning(f"OCR failed on page {page_num + 1}: {e}")
                 self._warnings.append(f"OCR failed on page {page_num + 1}")
@@ -472,14 +511,22 @@ class PDFParser(BaseParser):
         # Find headings
         headings = []
         unique_sizes = sorted(set(font_sizes), reverse=True)
+        max_heading_words = self.options.get("max_heading_words", 25)
 
         for block in text_blocks:
-            if block["font_size"] >= min_heading_size or block["is_bold"]:
+            # Refined heuristic: heading must meet one of these criteria:
+            # 1. Font size above threshold
+            # 2. Bold AND font size above average (not just any bold text)
+            is_heading_candidate = block["font_size"] >= min_heading_size or (
+                block["is_bold"] and block["font_size"] > avg_size
+            )
+
+            if is_heading_candidate:
                 # Only consider lines with reasonable length for headings
                 text = block["text"].strip()
                 word_count = len(text.split())
-                # Headings are typically 1-20 words (adjust min to 1 to catch short headings)
-                if 1 <= word_count <= 20:
+                # Headings are typically 1-25 words (configurable via options)
+                if 1 <= word_count <= max_heading_words:
                     # Map font size to heading level
                     level = self._map_font_size_to_level(
                         block["font_size"], unique_sizes
@@ -527,9 +574,11 @@ class PDFParser(BaseParser):
         - Level 2: ## Heading
         - etc.
 
+        Uses position-based replacement to avoid replacing wrong occurrences.
+
         Args:
             text: Original text
-            headings: Detected headings with levels
+            headings: Detected headings with levels (text, level, position)
 
         Returns:
             Text with markdown headings
@@ -537,17 +586,42 @@ class PDFParser(BaseParser):
         if not headings:
             return text
 
-        # Sort headings by position (descending) to avoid offset issues
+        # Sort headings by position (descending) to process from end to start
+        # This avoids position offset issues when modifying the string
         sorted_headings = sorted(headings, key=lambda x: x[2], reverse=True)
 
         result = text
-        for heading_text, level, position in sorted_headings:
+        for heading_text, level, approx_position in sorted_headings:
             # Create markdown heading
             markdown_heading = f"\n{'#' * level} {heading_text}\n"
 
-            # Find and replace the heading text
-            # Use simple string replacement since positions might be approximate
-            result = result.replace(heading_text, markdown_heading, 1)
+            # Search for the heading text near the approximate position
+            # Use a window around the position to account for minor discrepancies
+            search_start = max(0, approx_position - 100)
+            search_end = min(len(result), approx_position + len(heading_text) + 100)
+            search_region = result[search_start:search_end]
+
+            # Find the heading text in the search region
+            heading_index = search_region.find(heading_text)
+
+            if heading_index != -1:
+                # Calculate actual position in the full text
+                actual_position = search_start + heading_index
+
+                # Replace at the specific position
+                result = (
+                    result[:actual_position]
+                    + markdown_heading
+                    + result[actual_position + len(heading_text) :]
+                )
+            else:
+                # Fallback: use simple replacement if position-based fails
+                # This handles cases where spacing might have changed
+                logger.debug(
+                    f"Position-based replacement failed for '{heading_text}', "
+                    f"using fallback"
+                )
+                result = result.replace(heading_text, markdown_heading, 1)
 
         return result
 
@@ -673,8 +747,18 @@ class PDFParser(BaseParser):
             output_dir = Path(self._temp_dir.name)
 
         image_counter = 0
+        max_images = self.options.get("max_images")
 
         for page_num in range(len(doc)):
+            # Check if we've reached the image limit
+            if max_images and image_counter >= max_images:
+                logger.info(
+                    f"Reached max_images limit ({max_images}), stopping extraction"
+                )
+                self._warnings.append(
+                    f"Image extraction limited to {max_images} images"
+                )
+                break
             page = doc[page_num]
             image_list = page.get_images()
 
@@ -705,7 +789,8 @@ class PDFParser(BaseParser):
                         with Image.open(io.BytesIO(image_data)) as pil_img:
                             width, height = pil_img.size
                             size = (width, height)
-                    except Exception:
+                    except (IOError, OSError, Image.UnidentifiedImageError) as e:
+                        logger.debug(f"Failed to get image size: {e}")
                         size = None
 
                     # Create ImageReference
