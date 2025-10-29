@@ -231,6 +231,35 @@ def _parse_quality_response(response: str) -> Dict[str, Any]:
         logger.warning(f"Error parsing quality response: {e}")
         logger.debug(f"Raw response: {response}")
 
+    # Validate that required fields were extracted
+    if result["overall_score"] == 0:
+        logger.warning(
+            f"Failed to extract overall score from response. "
+            f"Response preview: {response[:200]}..."
+        )
+
+    # Check if all dimension scores are still at defaults (0)
+    if all(
+        result[key] == 0
+        for key in ["readability", "structure", "completeness", "coherence"]
+    ):
+        logger.warning(
+            f"Failed to extract any dimension scores from response. "
+            f"Response preview: {response[:200]}..."
+        )
+
+    if not result["suggestions"]:
+        logger.warning(
+            f"Failed to extract suggestions from response. "
+            f"Response preview: {response[:200]}..."
+        )
+
+    if not result["strengths"]:
+        logger.warning(
+            f"Failed to extract strengths from response. "
+            f"Response preview: {response[:200]}..."
+        )
+
     return result
 
 

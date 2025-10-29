@@ -44,6 +44,9 @@ logger = logging.getLogger(__name__)
 # Maximum image file size in bytes (10MB)
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
 
+# Supported image formats
+SUPPORTED_IMAGE_FORMATS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
 
 @dataclass
 class ImageAnalysis:
@@ -128,6 +131,13 @@ def analyze_image(
     path = Path(image_path)
     if not path.exists():
         raise ValueError(f"Image file not found: {image_path}")
+
+    # Validate image format
+    if path.suffix.lower() not in SUPPORTED_IMAGE_FORMATS:
+        raise ValueError(
+            f"Unsupported image format: {path.suffix}. "
+            f"Supported formats: {', '.join(sorted(SUPPORTED_IMAGE_FORMATS))}"
+        )
 
     # Check file size to avoid memory issues
     file_size = path.stat().st_size
@@ -358,6 +368,25 @@ def _parse_analysis_response(response: str, image_path: str) -> ImageAnalysis:
     except Exception as e:
         logger.warning(f"Error parsing analysis response: {e}")
         logger.debug(f"Raw response: {response}")
+
+    # Validate that required fields were extracted
+    if not analysis.image_type or analysis.image_type == "unknown":
+        logger.warning(
+            f"Failed to extract image type from response. "
+            f"Response preview: {response[:200]}..."
+        )
+
+    if not analysis.description:
+        logger.warning(
+            f"Failed to extract description from response. "
+            f"Response preview: {response[:200]}..."
+        )
+
+    if not analysis.alt_text:
+        logger.warning(
+            f"Failed to extract alt text from response. "
+            f"Response preview: {response[:200]}..."
+        )
 
     return analysis
 
