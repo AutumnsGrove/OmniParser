@@ -238,7 +238,7 @@ class TestHTMLParserFetchURL:
             "http://example.com",
             timeout=10,
             headers={
-                "User-Agent": "OmniParser/0.2.0 (+https://github.com/AutumnsGrove/omniparser)"
+                "User-Agent": "OmniParser/0.2.1 (+https://github.com/AutumnsGrove/omniparser)"
             },
         )
 
@@ -256,7 +256,7 @@ class TestHTMLParserFetchURL:
             "http://example.com",
             timeout=30,
             headers={
-                "User-Agent": "OmniParser/0.2.0 (+https://github.com/AutumnsGrove/omniparser)"
+                "User-Agent": "OmniParser/0.2.1 (+https://github.com/AutumnsGrove/omniparser)"
             },
         )
 
@@ -1142,7 +1142,7 @@ class TestHTMLParserImageExtraction:
                         "http://example.com/image.jpg",
                         timeout=10,
                         headers={
-                            "User-Agent": "OmniParser/0.2.0 (+https://github.com/AutumnsGrove/omniparser)"
+                            "User-Agent": "OmniParser/0.2.1 (+https://github.com/AutumnsGrove/omniparser)"
                         },
                         stream=True,
                     )

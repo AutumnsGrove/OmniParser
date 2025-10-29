@@ -1,7 +1,7 @@
 # TODOS - OmniParser
 
 **Last Updated:** 2025-10-29
-**Current Phase:** Phase 2.5 Complete - HTML Parser with Image Extraction Production-Ready (v0.2.0)
+**Current Phase:** Phase 2.5 Complete - HTML Parser with Image Extraction Production-Ready (v0.2.1)
 
 ---
 

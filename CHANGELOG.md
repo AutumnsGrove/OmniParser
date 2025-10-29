@@ -157,7 +157,7 @@ First development release featuring a production-ready EPUB parser with comprehe
 ## [Unreleased]
 
 ### Planned for Future Releases
-- v0.2.0: PDF parser implementation (Phase 2.4)
+- v0.2.1: PDF parser implementation (Phase 2.4)
 - v0.3.0: DOCX parser implementation (Phase 2.5)
 - v0.4.0: HTML/URL parser implementation (Phase 2.5)
 - v0.5.0: Markdown and Text parsers (Phase 2.6)

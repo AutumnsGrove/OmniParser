@@ -171,7 +171,7 @@ class HTMLParser(BaseParser):
         """
         user_agent = self.options.get(
             "user_agent",
-            "OmniParser/0.2.0 (+https://github.com/AutumnsGrove/omniparser)",
+            "OmniParser/0.2.1 (+https://github.com/AutumnsGrove/omniparser)",
         )
         return {"User-Agent": user_agent}
 

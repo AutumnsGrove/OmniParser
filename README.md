@@ -1,7 +1,7 @@
 # OmniParser - Universal Document Parser
 
 **Status:** Phase 2.5 Complete ✅ | HTML Parser Production-Ready with Enhancements
-**Version:** 0.2.0 (Development)
+**Version:** 0.2.1 (Development)
 **License:** MIT
 
 ---
@@ -78,7 +78,7 @@ From books and PDFs to blog posts and tweets, from research papers to Reddit thr
 
 ---
 
-## What Works Today (v0.2.0)
+## What Works Today (v0.2.1)
 
 **Production-Ready EPUB Parser** with:
 - ✅ **TOC-based chapter detection** (with spine-based fallback)
@@ -110,7 +110,7 @@ doc = parse_document("alice-in-wonderland.epub")
 - ✅ **Live URL fetching** with configurable timeout (default: 10s)
 - ✅ **Parallel image downloads** using ThreadPoolExecutor (default: 5 workers)
 - ✅ **Configurable rate limiting** for good web citizenship (default: no limit)
-- ✅ **Custom User-Agent** support (default: OmniParser/0.2.0)
+- ✅ **Custom User-Agent** support (default: OmniParser/0.2.1)
 - ✅ **Comprehensive image extraction** with alt text, dimensions, and format detection
 - ✅ **Metadata extraction** from OpenGraph, Dublin Core, and meta tags
 - ✅ **Heading-based chapter detection** for structured content
@@ -343,7 +343,7 @@ python examples/epub_to_markdown.py book.epub output/
 ### 📋 Next Steps
 
 **Option A: Phase 3 - Package Release** (Recommended)
-- [ ] Update documentation for v0.2.0
+- [ ] Update documentation for v0.2.1
 - [ ] Set up CI/CD pipeline
 - [ ] Publish to PyPI as EPUB/HTML parser
 - [ ] Create demo repository
@@ -429,7 +429,7 @@ class BaseParser(ABC):
 
 ## Dependencies
 
-### Currently Active (v0.2.0 - EPUB & HTML Parsers)
+### Currently Active (v0.2.1 - EPUB & HTML Parsers)
 - **Core Processing:**
   - pyyaml>=6.0 - Configuration and data serialization
   - beautifulsoup4>=4.12.0 - HTML parsing
@@ -508,7 +508,7 @@ tests/
 
 ## Success Metrics
 
-### v0.2.0 - EPUB & HTML Parsers (Current)
+### v0.2.1 - EPUB & HTML Parsers (Current)
 - [x] EPUB parser fully implemented and tested (357 tests)
 - [x] HTML/URL parser fully implemented and tested (105 tests)
 - [x] >90% test coverage for all components (468 tests passing)
@@ -572,6 +572,6 @@ MIT License - See LICENSE file for details
 ---
 
 **Status:** Phase 2.5 Complete ✅ | HTML Parser Production-Ready with Enhancements
-**Version:** v0.2.0 (Development)
+**Version:** v0.2.1 (Development)
 **Next Action:** Choose Phase 3 (PyPI Release) or Phase 2.4 (PDF Parser)
 **Last Updated:** October 29, 2025
