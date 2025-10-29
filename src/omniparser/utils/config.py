@@ -228,7 +228,9 @@ def merge_options(
 
 
 def get_ai_options(
-    provider: str, config: Optional[Dict[str, Any]] = None, user_options: Optional[Dict[str, Any]] = None
+    provider: str,
+    config: Optional[Dict[str, Any]] = None,
+    user_options: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Get AI options for a specific provider with config and user overrides.
@@ -265,7 +267,7 @@ def get_ai_options(
     if user_options:
         result = _deep_merge(result, user_options)
 
-    return result
+    return dict(result)
 
 
 def get_parsing_options(
@@ -304,7 +306,7 @@ def get_parsing_options(
     if user_options:
         parsing_config = _deep_merge(parsing_config, user_options)
 
-    return parsing_config
+    return dict(parsing_config)
 
 
 def create_config_template(output_path: Optional[Path] = None) -> Path:
@@ -338,7 +340,7 @@ def create_config_template(output_path: Optional[Path] = None) -> Path:
     return output_path
 
 
-def validate_config(config: Dict[str, Any]) -> tuple[bool, list]:
+def validate_config(config: Dict[str, Any]) -> tuple[bool, list[str]]:
     """
     Validate configuration structure and values.
 

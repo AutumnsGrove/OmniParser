@@ -32,7 +32,7 @@ import base64
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 from ..ai_config import AIConfig
 
@@ -320,7 +320,7 @@ def _analyze_image_anthropic(
     media_type = media_types.get(image_path.suffix.lower(), "image/jpeg")
 
     try:
-        message = ai_config.client.messages.create(
+        message = ai_config.client.messages.create(  # type: ignore[union-attr]
             model=ai_config.model,
             max_tokens=ai_config.max_tokens,
             temperature=ai_config.temperature,
@@ -329,7 +329,7 @@ def _analyze_image_anthropic(
                 {
                     "role": "user",
                     "content": [
-                        {
+                        {  # type: ignore[list-item]
                             "type": "image",
                             "source": {
                                 "type": "base64",
@@ -342,7 +342,7 @@ def _analyze_image_anthropic(
                 }
             ],
         )
-        return message.content[0].text
+        return message.content[0].text  # type: ignore[union-attr]
     except Exception as e:
         logger.error(f"Anthropic vision API call failed: {e}")
         raise
@@ -372,7 +372,7 @@ def _analyze_image_openai(
         messages.append(
             {
                 "role": "user",
-                "content": [
+                "content": [  # type: ignore[dict-item]
                     {
                         "type": "image_url",
                         "image_url": {"url": f"data:{media_type};base64,{image_data}"},
@@ -382,11 +382,11 @@ def _analyze_image_openai(
             }
         )
 
-        response = ai_config.client.chat.completions.create(
+        response = ai_config.client.chat.completions.create(  # type: ignore[union-attr]
             model=ai_config.model,
             max_tokens=ai_config.max_tokens,
             temperature=ai_config.temperature,
-            messages=messages,
+            messages=messages,  # type: ignore[arg-type]
         )
         return response.choices[0].message.content or ""
     except Exception as e:
@@ -499,7 +499,7 @@ def analyze_images_batch(
     image_paths: List[str],
     ai_options: Optional[Dict[str, Any]] = None,
     batch_size: int = 10,
-    progress_callback: Optional[callable] = None,
+    progress_callback: Optional[Callable[[int, int], None]] = None,
 ) -> List[ImageAnalysis]:
     """
     Analyze multiple images in batches with memory management.

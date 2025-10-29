@@ -209,7 +209,7 @@ class AIConfig:
             Model name string.
         """
         if "ai_model" in self.options:
-            return self.options["ai_model"]
+            return str(self.options["ai_model"])
 
         # Provider defaults (fast, cost-effective models)
         provider_defaults = {
@@ -236,7 +236,9 @@ class AIConfig:
             anthropic_sdk = _import_sdk("anthropic")
 
             # Check secrets.json first, then environment variable
-            api_key = _SECRETS.get("anthropic_api_key") or os.getenv("ANTHROPIC_API_KEY")
+            api_key = _SECRETS.get("anthropic_api_key") or os.getenv(
+                "ANTHROPIC_API_KEY"
+            )
             if not api_key:
                 raise ValueError(
                     "ANTHROPIC_API_KEY not found. "
@@ -244,7 +246,7 @@ class AIConfig:
                 )
 
             logger.info("Initialized Anthropic client with model: %s", self.model)
-            return anthropic_sdk.Anthropic(api_key=api_key, timeout=self.timeout)
+            return anthropic_sdk.Anthropic(api_key=api_key, timeout=self.timeout)  # type: ignore[return-value, no-any-return]
 
         elif self.provider == AIProvider.OPENAI:
             openai_sdk = _import_sdk("openai")
@@ -258,13 +260,15 @@ class AIConfig:
                 )
 
             logger.info("Initialized OpenAI client with model: %s", self.model)
-            return openai_sdk.OpenAI(api_key=api_key, timeout=self.timeout)
+            return openai_sdk.OpenAI(api_key=api_key, timeout=self.timeout)  # type: ignore[return-value, no-any-return]
 
         elif self.provider == AIProvider.OPENROUTER:
             openai_sdk = _import_sdk("openai")
 
             # Check secrets.json first, then environment variable
-            api_key = _SECRETS.get("openrouter_api_key") or os.getenv("OPENROUTER_API_KEY")
+            api_key = _SECRETS.get("openrouter_api_key") or os.getenv(
+                "OPENROUTER_API_KEY"
+            )
             if not api_key:
                 raise ValueError(
                     "OPENROUTER_API_KEY not found. "
@@ -272,7 +276,7 @@ class AIConfig:
                 )
 
             logger.info("Initialized OpenRouter client with model: %s", self.model)
-            return openai_sdk.OpenAI(
+            return openai_sdk.OpenAI(  # type: ignore[return-value, no-any-return]
                 api_key=api_key,
                 base_url="https://openrouter.ai/api/v1",
                 timeout=self.timeout,
@@ -292,7 +296,7 @@ class AIConfig:
                 "Initialized Ollama client with model: %s at %s", self.model, base_url
             )
             # Ollama doesn't require API key
-            return openai_sdk.OpenAI(
+            return openai_sdk.OpenAI(  # type: ignore[return-value, no-any-return]
                 api_key="ollama", base_url=base_url, timeout=self.timeout
             )
 
@@ -312,7 +316,7 @@ class AIConfig:
                 base_url,
             )
             # LM Studio doesn't require API key
-            return openai_sdk.OpenAI(
+            return openai_sdk.OpenAI(  # type: ignore[return-value, no-any-return]
                 api_key="lmstudio", base_url=base_url, timeout=self.timeout
             )
 
@@ -450,14 +454,14 @@ class AIConfig:
         Raises:
             anthropic.APIError: If API call fails.
         """
-        message = self.client.messages.create(
+        message = self.client.messages.create(  # type: ignore[union-attr]
             model=self.model,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             system=system or "",
             messages=[{"role": "user", "content": prompt}],
         )
-        return message.content[0].text
+        return message.content[0].text  # type: ignore[union-attr]
 
     def _generate_openai(self, prompt: str, system: Optional[str]) -> str:
         """
@@ -478,10 +482,10 @@ class AIConfig:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
 
-        response = self.client.chat.completions.create(
+        response = self.client.chat.completions.create(  # type: ignore[union-attr]
             model=self.model,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
-            messages=messages,
+            messages=messages,  # type: ignore[arg-type]
         )
         return response.choices[0].message.content or ""

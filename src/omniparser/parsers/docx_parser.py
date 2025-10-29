@@ -675,7 +675,9 @@ class DOCXParser(BaseParser):
                         )
 
                         # Get image dimensions using shared utility
-                        width, height, detected_format = get_image_dimensions(image_bytes)
+                        width, height, detected_format = get_image_dimensions(
+                            image_bytes
+                        )
                         if detected_format != "unknown":
                             format_name = detected_format
 
