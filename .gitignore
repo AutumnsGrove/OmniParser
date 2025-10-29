@@ -93,6 +93,13 @@ tests/fixtures/**/*.epub
 tests/fixtures/**/*.pdf
 tests/fixtures/**/*.docx
 
+# Block test images (user adds their own)
+tests/fixtures/images/**/*.png
+tests/fixtures/images/**/*.jpg
+tests/fixtures/images/**/*.jpeg
+tests/fixtures/images/**/*.gif
+tests/fixtures/images/**/*.webp
+
 # Allow only the 5 public domain examples from Project Gutenberg
 !tests/fixtures/epub/alice-in-wonderland.epub
 !tests/fixtures/epub/pride-and-prejudice.epub
@@ -101,6 +108,7 @@ tests/fixtures/**/*.docx
 !tests/fixtures/epub/jekyll-and-hyde.epub
 
 !tests/fixtures/.gitkeep
+!tests/fixtures/images/README.md
 
 # Ignore generated documentation
 docs/_build/

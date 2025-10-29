@@ -210,6 +210,258 @@ class TestOllamaIntegration:
             pytest.skip(f"Ollama not available: {e}")
 
 
+class TestAnthropicAdvancedFeatures:
+    """Advanced integration tests for Anthropic-specific features."""
+
+    @pytest.mark.skipif(
+        not os.getenv("ANTHROPIC_API_KEY"),
+        reason="ANTHROPIC_API_KEY not set. Set it to run this test.",
+    )
+    def test_summarize_all_styles(self, sample_document: Document) -> None:
+        """Test all three summary styles: concise, detailed, bullet."""
+        ai_options = {
+            "ai_provider": "anthropic",
+            "ai_model": "claude-3-haiku-20240307",
+        }
+
+        # Test concise summary
+        concise = summarize_document(
+            sample_document, style="concise", ai_options=ai_options
+        )
+        assert isinstance(concise, str)
+        assert len(concise) > 0
+        assert len(concise) < 1000  # Should be short
+
+        # Test detailed summary
+        detailed = summarize_document(
+            sample_document, style="detailed", max_length=500, ai_options=ai_options
+        )
+        assert isinstance(detailed, str)
+        assert len(detailed) >= len(concise)  # Should be longer than concise
+
+        # Test bullet point summary
+        bullet = summarize_document(
+            sample_document, style="bullet", ai_options=ai_options
+        )
+        assert isinstance(bullet, str)
+        assert "-" in bullet or "•" in bullet or "*" in bullet  # Should have bullets
+
+        print("\n✅ All summary styles tested successfully:")
+        print(f"   Concise ({len(concise)} chars): {concise[:60]}...")
+        print(f"   Detailed ({len(detailed)} chars): {detailed[:60]}...")
+        print(f"   Bullet ({len(bullet)} chars): {bullet[:60]}...")
+
+    @pytest.mark.skipif(
+        not os.getenv("ANTHROPIC_API_KEY"),
+        reason="ANTHROPIC_API_KEY not set. Set it to run this test.",
+    )
+    def test_quality_scoring_detailed(self, sample_document: Document) -> None:
+        """Test detailed quality scoring with all metrics."""
+        ai_options = {"ai_provider": "anthropic"}
+
+        result = score_quality(sample_document, ai_options=ai_options)
+
+        # Verify all expected fields
+        assert "overall_score" in result
+        assert "readability" in result
+        assert "structure" in result
+        assert "completeness" in result
+        assert "coherence" in result
+        assert "strengths" in result
+        assert "suggestions" in result
+
+        # Verify score ranges
+        assert 0 <= result["overall_score"] <= 100
+        assert 0 <= result["readability"] <= 100
+        assert 0 <= result["structure"] <= 100
+        assert 0 <= result["completeness"] <= 100
+        assert 0 <= result["coherence"] <= 100
+
+        # Verify lists
+        assert isinstance(result["strengths"], list)
+        assert isinstance(result["suggestions"], list)
+
+        print("\n✅ Detailed quality scoring:")
+        print(f"   Overall: {result['overall_score']}/100")
+        print(f"   Readability: {result['readability']}/100")
+        print(f"   Structure: {result['structure']}/100")
+        print(f"   Completeness: {result['completeness']}/100")
+        print(f"   Coherence: {result['coherence']}/100")
+        print(f"   Strengths: {len(result['strengths'])} items")
+        print(f"   Suggestions: {len(result['suggestions'])} items")
+
+    @pytest.mark.skipif(
+        not os.getenv("ANTHROPIC_API_KEY"),
+        reason="ANTHROPIC_API_KEY not set. Set it to run this test.",
+    )
+    def test_tag_generation_with_limits(self, sample_document: Document) -> None:
+        """Test tag generation with different max_tags limits."""
+        ai_options = {"ai_provider": "anthropic"}
+
+        # Test with different limits
+        limits = [3, 5, 10, 15]
+
+        for limit in limits:
+            tags = generate_tags(
+                sample_document, max_tags=limit, ai_options=ai_options
+            )
+
+            assert isinstance(tags, list)
+            assert len(tags) > 0
+            assert len(tags) <= limit  # Should respect limit
+
+            print(f"✅ Generated {len(tags)} tags (limit: {limit}): {tags[:5]}...")
+
+
+class TestEdgeCasesIntegration:
+    """Integration tests for edge cases and error scenarios."""
+
+    @pytest.mark.skipif(
+        not os.getenv("ANTHROPIC_API_KEY"),
+        reason="ANTHROPIC_API_KEY not set. Set it to run this test.",
+    )
+    def test_empty_document_handling(self) -> None:
+        """Test handling of documents with minimal content."""
+        metadata = Metadata(
+            title="Empty Test",
+            author="Test",
+            original_format="test",
+        )
+
+        processing_info = ProcessingInfo(
+            parser_used="Test",
+            parser_version="1.0.0",
+            processing_time=0.1,
+            timestamp=datetime.now(),
+        )
+
+        # Document with very minimal content
+        minimal_doc = Document(
+            document_id="minimal",
+            content="Test.",
+            chapters=[],
+            images=[],
+            metadata=metadata,
+            processing_info=processing_info,
+            word_count=1,
+            estimated_reading_time=1,
+        )
+
+        ai_options = {"ai_provider": "anthropic"}
+
+        # Should handle gracefully
+        tags = generate_tags(minimal_doc, max_tags=5, ai_options=ai_options)
+        assert isinstance(tags, list)  # May be empty, but should not crash
+
+        summary = summarize_document(minimal_doc, style="concise", ai_options=ai_options)
+        assert isinstance(summary, str)
+
+        print("✅ Handled minimal content document successfully")
+
+    @pytest.mark.skipif(
+        not os.getenv("ANTHROPIC_API_KEY"),
+        reason="ANTHROPIC_API_KEY not set. Set it to run this test.",
+    )
+    def test_long_document_handling(self) -> None:
+        """Test handling of longer documents."""
+        metadata = Metadata(
+            title="Long Document Test",
+            author="Test",
+            original_format="test",
+        )
+
+        processing_info = ProcessingInfo(
+            parser_used="Test",
+            parser_version="1.0.0",
+            processing_time=1.0,
+            timestamp=datetime.now(),
+        )
+
+        # Create a longer document by repeating content
+        long_content = """
+Machine learning is a powerful technology. It enables computers to learn from data.
+Deep learning is a subset of machine learning that uses neural networks.
+Natural language processing helps computers understand human language.
+Computer vision enables machines to interpret visual information.
+""" * 20  # Repeat 20 times for longer content
+
+        long_doc = Document(
+            document_id="long_doc",
+            content=long_content,
+            chapters=[],
+            images=[],
+            metadata=metadata,
+            processing_info=processing_info,
+            word_count=len(long_content.split()),
+            estimated_reading_time=10,
+        )
+
+        ai_options = {"ai_provider": "anthropic"}
+
+        # Should handle longer content
+        tags = generate_tags(long_doc, max_tags=10, ai_options=ai_options)
+        assert isinstance(tags, list)
+        assert len(tags) > 0
+
+        summary = summarize_document(long_doc, style="detailed", ai_options=ai_options)
+        assert isinstance(summary, str)
+        assert len(summary) > 0
+
+        print(f"✅ Handled long document ({len(long_content)} chars) successfully")
+
+    @pytest.mark.skipif(
+        not os.getenv("ANTHROPIC_API_KEY"),
+        reason="ANTHROPIC_API_KEY not set. Set it to run this test.",
+    )
+    def test_special_characters_handling(self) -> None:
+        """Test handling of documents with special characters."""
+        metadata = Metadata(
+            title="Special Characters Test™",
+            author="Test © 2024",
+            original_format="test",
+        )
+
+        processing_info = ProcessingInfo(
+            parser_used="Test",
+            parser_version="1.0.0",
+            processing_time=0.5,
+            timestamp=datetime.now(),
+        )
+
+        special_content = """
+This document contains special characters: é, ñ, ü, ø, æ
+Mathematical symbols: ∑, ∫, √, π, ∞, ≠, ≤, ≥
+Currency: $, €, £, ¥, ₹
+Punctuation: — – … " " ' '
+Emojis: 🚀 🎯 💡 ✨ 🔥
+
+And some code with special chars:
+def test(): return x >= y && z != null;
+"""
+
+        special_doc = Document(
+            document_id="special_chars",
+            content=special_content,
+            chapters=[],
+            images=[],
+            metadata=metadata,
+            processing_info=processing_info,
+            word_count=50,
+            estimated_reading_time=1,
+        )
+
+        ai_options = {"ai_provider": "anthropic"}
+
+        # Should handle special characters
+        tags = generate_tags(special_doc, max_tags=10, ai_options=ai_options)
+        assert isinstance(tags, list)
+
+        summary = summarize_document(special_doc, style="concise", ai_options=ai_options)
+        assert isinstance(summary, str)
+
+        print("✅ Handled special characters successfully")
+
+
 class TestMultiProviderConsistency:
     """Tests comparing results across different providers."""
 
