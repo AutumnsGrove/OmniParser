@@ -13,6 +13,7 @@ from .exceptions import UnsupportedFormatError, FileReadError
 from .models import Document
 from .parsers.epub_parser import EPUBParser
 from .parsers.html_parser import HTMLParser
+from .parsers.pdf_parser import PDFParser
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +27,9 @@ def parse_document(
     Currently supported formats:
     - EPUB (.epub)
     - HTML (.html, .htm) - local files and URLs
+    - PDF (.pdf)
 
     Future support planned for:
-    - PDF (.pdf)
     - DOCX (.docx)
     - Markdown (.md)
     - Text (.txt)
@@ -47,6 +48,12 @@ def parse_document(
             - timeout (int): URL fetch timeout in seconds. Default: 10
             - min_chapter_level (int): Minimum heading level for chapters. Default: 1
             - max_chapter_level (int): Maximum heading level for chapters. Default: 2
+
+            PDF-specific options:
+            - ocr_enabled (bool): Enable OCR for scanned PDFs. Default: True
+            - ocr_language (str): Tesseract language code. Default: 'eng'
+            - min_heading_size (float): Minimum font size for headings. Default: auto
+            - extract_tables (bool): Extract and convert tables. Default: True
 
     Returns:
         Document object with parsed content, chapters, images, and metadata.
@@ -95,11 +102,10 @@ def parse_document(
         epub_parser = EPUBParser(options)
         return epub_parser.parse(file_path)
 
-    # PDF format (not yet implemented)
+    # PDF format
     elif file_extension in [".pdf"]:
-        raise UnsupportedFormatError(
-            f"PDF format not yet implemented. Coming in future version."
-        )
+        pdf_parser = PDFParser(options)
+        return pdf_parser.parse(file_path)
 
     # DOCX format (not yet implemented)
     elif file_extension in [".docx", ".doc"]:
@@ -128,7 +134,7 @@ def parse_document(
     else:
         raise UnsupportedFormatError(
             f"Unsupported file format: {file_extension}. "
-            f"Supported formats: .epub, .html, .htm (more coming soon)"
+            f"Supported formats: .epub, .pdf, .html, .htm (more coming soon)"
         )
 
 
@@ -136,9 +142,9 @@ def get_supported_formats() -> list[str]:
     """Get list of currently supported file formats.
 
     Returns:
-        List of file extensions (e.g., ['.epub', '.html', '.htm']).
+        List of file extensions (e.g., ['.epub', '.pdf', '.html', '.htm']).
     """
-    return [".epub", ".html", ".htm"]
+    return [".epub", ".pdf", ".html", ".htm"]
 
 
 def is_format_supported(file_path: str | Path) -> bool:
