@@ -986,7 +986,9 @@ class EPUBParser(BaseParser):
                 is_valid, error = validate_image_data(image_content, min_size=1)
                 if not is_valid:
                     logger.warning(f"Skipping invalid image {image_name}: {error}")
-                    self._warnings.append(f"Skipped invalid image {image_name}: {error}")
+                    self._warnings.append(
+                        f"Skipped invalid image {image_name}: {error}"
+                    )
                     continue
 
                 # Save image (preserves subdirectory structure)

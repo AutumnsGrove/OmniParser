@@ -49,7 +49,7 @@ class HTMLTextExtractor(HTMLParser):
         self._in_list_item = False
         self._li_has_content = False
 
-    def handle_starttag(self, tag: str, attrs: list) -> None:
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         """
         Handle opening HTML tags.
 

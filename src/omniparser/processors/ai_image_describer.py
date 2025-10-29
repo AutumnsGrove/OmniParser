@@ -239,7 +239,7 @@ def _describe_image_anthropic(
     media_type = media_types.get(image_path.suffix.lower(), "image/jpeg")
 
     try:
-        message = ai_config.client.messages.create(
+        message = ai_config.client.messages.create(  # type: ignore[union-attr]
             model=ai_config.model,
             max_tokens=ai_config.max_tokens,
             temperature=ai_config.temperature,
@@ -248,7 +248,7 @@ def _describe_image_anthropic(
                 {
                     "role": "user",
                     "content": [
-                        {
+                        {  # type: ignore[list-item]
                             "type": "image",
                             "source": {
                                 "type": "base64",
@@ -261,7 +261,7 @@ def _describe_image_anthropic(
                 }
             ],
         )
-        return message.content[0].text
+        return message.content[0].text  # type: ignore[union-attr]
     except Exception as e:
         logger.error(f"Anthropic vision API call failed: {e}")
         raise
@@ -293,7 +293,7 @@ def _describe_image_openai(
         messages.append(
             {
                 "role": "user",
-                "content": [
+                "content": [  # type: ignore[dict-item]
                     {
                         "type": "image_url",
                         "image_url": {"url": f"data:{media_type};base64,{image_data}"},
@@ -303,11 +303,11 @@ def _describe_image_openai(
             }
         )
 
-        response = ai_config.client.chat.completions.create(
+        response = ai_config.client.chat.completions.create(  # type: ignore[union-attr]
             model=ai_config.model,
             max_tokens=ai_config.max_tokens,
             temperature=ai_config.temperature,
-            messages=messages,
+            messages=messages,  # type: ignore[arg-type]
         )
         return response.choices[0].message.content or ""
     except Exception as e:

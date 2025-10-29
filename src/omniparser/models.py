@@ -45,7 +45,7 @@ class ImageReference:
     position: int
     file_path: Optional[str] = None
     alt_text: Optional[str] = None
-    size: Optional[tuple] = None
+    size: Optional[tuple[int, int]] = None
     format: str = "unknown"
 
 
@@ -236,7 +236,7 @@ class Document:
         """
         return self.content[start:end]
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Serialize to dictionary.
 
         Returns:
@@ -247,7 +247,7 @@ class Document:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Document":
+    def from_dict(cls, data: Dict[str, Any]) -> "Document":
         """Deserialize from dictionary.
 
         Args:

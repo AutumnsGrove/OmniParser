@@ -150,13 +150,13 @@ def get_secret(
             )
         return default
 
-    return value
+    return str(value) if value is not None else default
 
 
 def validate_secrets(
     secrets: Dict[str, Any],
-    required_keys: Optional[list] = None,
-) -> tuple[bool, list]:
+    required_keys: Optional[list[str]] = None,
+) -> tuple[bool, list[str]]:
     """
     Validate that required secrets are present and non-empty.
 
