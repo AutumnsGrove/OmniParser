@@ -1,0 +1,77 @@
+{
+  "ai": {
+    "default_provider": "anthropic",
+    "anthropic": {
+      "model": "claude-3-haiku-20240307",
+      "max_tokens": 1024,
+      "temperature": 0.3,
+      "timeout": 60,
+      "max_retries": 3,
+      "retry_delay": 1.0
+    },
+    "openai": {
+      "model": "gpt-3.5-turbo",
+      "max_tokens": 1024,
+      "temperature": 0.3,
+      "timeout": 60,
+      "max_retries": 3,
+      "retry_delay": 1.0
+    },
+    "openrouter": {
+      "model": "meta-llama/llama-3.2-3b-instruct:free",
+      "max_tokens": 1024,
+      "temperature": 0.3,
+      "timeout": 60,
+      "max_retries": 3,
+      "retry_delay": 1.0
+    },
+    "ollama": {
+      "base_url": "http://localhost:11434/v1",
+      "model": "llama3.2:latest",
+      "max_tokens": 1024,
+      "temperature": 0.3,
+      "timeout": 60,
+      "max_retries": 3,
+      "retry_delay": 1.0
+    },
+    "lmstudio": {
+      "base_url": "http://localhost:1234/v1",
+      "model": "local-model",
+      "max_tokens": 1024,
+      "temperature": 0.3,
+      "timeout": 60,
+      "max_retries": 3,
+      "retry_delay": 1.0
+    }
+  },
+  "parsing": {
+    "extract_images": true,
+    "image_output_dir": null,
+    "clean_text": true,
+    "detect_chapters": true,
+    "html": {
+      "timeout": 10,
+      "min_chapter_level": 1,
+      "max_chapter_level": 2
+    },
+    "epub": {
+      "use_toc": true,
+      "fallback_to_spine": true
+    },
+    "pdf": {
+      "extract_tables": true,
+      "ocr_images": false
+    },
+    "docx": {
+      "extract_comments": false,
+      "preserve_formatting": true
+    }
+  },
+  "ai_features": {
+    "enabled": false,
+    "auto_tag": false,
+    "auto_summarize": false,
+    "auto_describe_images": false,
+    "quality_check": false
+  }
+}
