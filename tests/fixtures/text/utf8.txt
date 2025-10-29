@@ -1,0 +1,19 @@
+UTF-8 Encoded Document
+
+This document contains various UTF-8 characters to test encoding detection.
+
+Special characters: café, résumé, naïve, Zürich
+Symbols: © ® ™ € £ ¥ § ¶
+Math: ≈ ≠ ≤ ≥ ∞ ∑ ∫
+Arrows: ← → ↑ ↓ ⇐ ⇒
+Greek: α β γ δ ε θ λ π σ ω
+Emoji: 😀 🎉 🚀 💡 📚 ✨
+
+The parser should correctly detect UTF-8 encoding and preserve all these special characters.
+
+Quotes: "Hello" 'World' „Guten Tag" «Bonjour»
+Dashes: – — ‒ ―
+Ellipsis: …
+Bullet: •
+
+This tests the encoding detection and UTF-8 handling capabilities.

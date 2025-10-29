@@ -1,0 +1,8 @@
+Mixed Line Endings
+
+This file has mixed line ending styles.
+Some lines use Unix style (LF).
+Others use Windows style (CRLF).And some use old Mac style (CR).
+
+The parser should normalize all of these.
+This tests the robustness of line ending handling.
