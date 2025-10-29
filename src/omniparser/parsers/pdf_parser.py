@@ -17,6 +17,7 @@ Features:
 
 import io
 import logging
+import statistics
 import tempfile
 import time
 import uuid
@@ -63,13 +64,36 @@ class PDFParser(BaseParser):
         max_pages (int): Maximum number of pages to process (default: None = all pages)
         max_images (int): Maximum number of images to extract (default: None = all images)
         ocr_timeout (int): Timeout for OCR operations in seconds (default: 300)
-        max_heading_words (int): Maximum words in a heading (default: 25)
+        max_heading_words (int): Maximum words in a heading (default: 25).
+            Increase for academic papers with long section titles.
+            Decrease for documents with short, concise headings.
+
+    Security Notes:
+        - Use max_pages and max_images when processing untrusted PDFs to prevent DoS
+        - OCR operations are resource-intensive; ocr_timeout prevents runaway processes
+        - Temp directory is automatically cleaned up on completion/error
+        - All file paths are validated before processing
+
+    Performance Notes:
+        - For PDFs with 100+ pages, consider using max_pages option to limit memory usage
+        - Processing is done in-memory without streaming
+        - OCR is significantly slower than text extraction (factor of 10-100x)
+        - Font analysis scales linearly with number of text blocks
 
     Example:
+        >>> # Basic usage
         >>> parser = PDFParser({'extract_images': True, 'ocr_enabled': True})
         >>> doc = parser.parse(Path("document.pdf"))
         >>> print(f"Title: {doc.metadata.title}")
         >>> print(f"Chapters: {len(doc.chapters)}")
+        >>>
+        >>> # Processing untrusted PDFs
+        >>> parser = PDFParser({
+        ...     'max_pages': 100,
+        ...     'max_images': 50,
+        ...     'ocr_enabled': False  # Disable expensive OCR
+        ... })
+        >>> doc = parser.parse(Path("untrusted.pdf"))
     """
 
     def __init__(self, options: Optional[Dict[str, Any]] = None):
@@ -497,11 +521,10 @@ class PDFParser(BaseParser):
         if not text_blocks:
             return []
 
-        # Calculate font size statistics
+        # Calculate font size statistics using statistics module
         font_sizes = [block["font_size"] for block in text_blocks]
-        avg_size = sum(font_sizes) / len(font_sizes)
-        variance = sum((s - avg_size) ** 2 for s in font_sizes) / len(font_sizes)
-        std_dev = variance**0.5
+        avg_size = statistics.mean(font_sizes)
+        std_dev = statistics.stdev(font_sizes) if len(font_sizes) > 1 else 0.0
 
         # Determine heading threshold
         min_heading_size = self.options.get("min_heading_size")
@@ -852,8 +875,17 @@ class PDFParser(BaseParser):
                             f"**Table from page {page_num + 1}**\n\n{markdown_table}"
                         )
 
+            except AttributeError as e:
+                # find_tables() might not be available in all PyMuPDF versions
+                logger.debug(
+                    f"Table extraction not supported or failed on page {page_num + 1}: {e}"
+                )
             except Exception as e:
-                logger.warning(f"Table extraction failed on page {page_num + 1}: {e}")
+                # Log exception type for debugging
+                logger.warning(
+                    f"Table extraction failed on page {page_num + 1} "
+                    f"({type(e).__name__}): {e}"
+                )
 
         logger.info(f"Extracted {len(tables)} tables")
         return tables
@@ -861,13 +893,21 @@ class PDFParser(BaseParser):
     def _table_to_markdown(self, table_data: List[List]) -> str:
         """Convert table data to markdown format.
 
+        Single-row tables (header only) are discarded as they likely
+        represent formatting artifacts rather than actual data tables.
+
         Args:
             table_data: 2D list of table cells.
 
         Returns:
-            Markdown-formatted table string.
+            Markdown-formatted table string, or empty string if invalid.
         """
-        if not table_data or len(table_data) < 2:
+        if not table_data:
+            return ""
+
+        if len(table_data) < 2:
+            # Single-row table (just headers) - likely not a real table
+            logger.debug(f"Discarding single-row table: {table_data[0]}")
             return ""
 
         lines = []
