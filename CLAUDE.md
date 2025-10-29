@@ -93,6 +93,65 @@ Changes
 
 ---
 
+## CHANGELOG Management
+
+**CRITICAL:** Follow this strategy to prevent future CHANGELOG corruption
+
+### Current Issue (Resolved Oct 29, 2025)
+Multiple parallel branches each added their own "[Unreleased]" section, causing 9 duplicate sections when merged. This was manually consolidated.
+
+### Prevention Strategy (Going Forward)
+
+1. **Single Source of Truth**
+   - Only ONE "[Unreleased]" section should ever exist at the top of CHANGELOG.md
+   - Before starting work on a branch, pull latest CHANGELOG.md
+   - Add your changes to the EXISTING "[Unreleased]" section
+
+2. **Merge Conflict Resolution**
+   - When merging, if there are CHANGELOG conflicts:
+   - Keep only ONE "[Unreleased]" section
+   - Merge all unique entries from both branches
+   - Remove duplicate entries
+   - Preserve chronological order (newest first)
+
+3. **Automation Option (Future)**
+   - Consider using git-cliff or keep-a-changelog tools
+   - Generate CHANGELOG from conventional commit messages
+   - Reduces manual maintenance burden
+
+4. **Pre-Merge Checklist**
+   - [ ] Only one "[Unreleased]" section exists
+   - [ ] All new features/fixes are documented
+   - [ ] No duplicate entries
+   - [ ] Proper categorization (Added/Changed/Fixed/Removed)
+
+### CHANGELOG Format
+
+```markdown
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [Unreleased]
+
+### Added
+- New features
+
+### Changed
+- Changes to existing functionality
+
+### Fixed
+- Bug fixes
+
+### Removed
+- Removed features
+
+## [0.3.0] - 2025-10-29
+...
+```
+
+---
+
 ## Subagent Commit Requirements
 
 **MANDATORY:** All subagents MUST commit their changes before completing their task.
