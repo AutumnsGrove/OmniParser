@@ -13,7 +13,7 @@ from .exceptions import UnsupportedFormatError, FileReadError
 from .models import Document
 from .parsers.epub_parser import EPUBParser
 from .parsers.html_parser import HTMLParser
-from .parsers.pdf_parser import PDFParser
+from .parsers.pdf import parse_pdf
 from .parsers.markdown_parser import MarkdownParser
 from .parsers.docx_parser import DOCXParser
 from .parsers.text_parser import TextParser
@@ -105,8 +105,11 @@ def parse_document(
 
     # PDF format
     elif file_extension in [".pdf"]:
-        pdf_parser = PDFParser(options)
-        return pdf_parser.parse(file_path)
+        # Extract image output directory from options if provided
+        output_dir = None
+        if options and "image_output_dir" in options:
+            output_dir = Path(options["image_output_dir"])
+        return parse_pdf(file_path, output_dir=output_dir, options=options)
 
     # DOCX format
     elif file_extension in [".docx"]:
