@@ -30,6 +30,7 @@ from ..models import Chapter, Document, ImageReference, Metadata, ProcessingInfo
 from ..processors.metadata_builder import MetadataBuilder
 from .epub.toc import TocEntry
 from .epub.utils import count_words, estimate_reading_time
+from .epub.validator import supports_epub_format, validate_epub_file
 
 logger = logging.getLogger(__name__)
 
@@ -93,9 +94,7 @@ class EPUBParser(BaseParser):
         Returns:
             True if file has .epub extension, False otherwise.
         """
-        if isinstance(file_path, str):
-            file_path = Path(file_path)
-        return file_path.suffix.lower() in [".epub"]
+        return supports_epub_format(file_path)
 
     def parse(self, file_path: Union[Path, str]) -> Document:
         """Parse EPUB file and return Document object.
@@ -226,27 +225,7 @@ class EPUBParser(BaseParser):
             FileReadError: If file doesn't exist or isn't readable.
             ValidationError: If file validation fails.
         """
-        # Check file exists
-        if not file_path.exists():
-            raise FileReadError(f"File not found: {file_path}")
-
-        # Check file is readable
-        if not file_path.is_file():
-            raise FileReadError(f"Not a file: {file_path}")
-
-        # Check extension
-        if not self.supports_format(file_path):
-            raise ValidationError(f"Not an EPUB file: {file_path}")
-
-        # Check file size
-        file_size = file_path.stat().st_size
-        if file_size == 0:
-            raise ValidationError(f"Empty file: {file_path}")
-
-        # Warn if file is very large (>500MB)
-        if file_size > 500 * 1024 * 1024:
-            logger.warning(f"Large EPUB file ({file_size / 1024 / 1024:.1f} MB)")
-            self._warnings.append(f"Large file size: {file_size / 1024 / 1024:.1f} MB")
+        validate_epub_file(file_path, warnings=self._warnings)
 
     def _load_epub(self, file_path: Path) -> epub.EpubBook:
         """Load EPUB file using ebooklib.
