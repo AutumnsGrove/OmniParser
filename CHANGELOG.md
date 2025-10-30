@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Markdown Parser Refactored**: Converted from 741-line monolithic class to modular functional architecture (7 modules, 1,370 lines)
+  - `markdown/validation.py` - File validation (101 lines)
+  - `markdown/frontmatter.py` - YAML/TOML/JSON frontmatter parsing (453 lines)
+  - `markdown/content.py` - Markdown content processing (140 lines)
+  - `markdown/images.py` - Image reference extraction (301 lines)
+  - `markdown/utils.py` - Word counting utilities (103 lines)
+  - `markdown/parser.py` - Orchestrator function (250 lines)
+  - `markdown/__init__.py` - Exports `parse_markdown()` function (22 lines)
+  - `markdown_parser.py` - Now 135-line backward compatibility wrapper
+- **Text Parser Refactored**: Converted from 580-line monolithic class to modular functional architecture (6 modules, 920 lines)
+  - `text/validation.py` - File validation (68 lines)
+  - `text/encoding.py` - Encoding detection with chardet (125 lines)
+  - `text/chapter_detection.py` - Pattern-based chapter detection (333 lines)
+  - `text/utils.py` - Word counting utilities (81 lines)
+  - `text/parser.py` - Orchestrator function (291 lines)
+  - `text/__init__.py` - Exports `parse_text()` function (22 lines)
+  - `text_parser.py` - Now 147-line backward compatibility wrapper
+
+### Technical Details
+- Both parsers follow functional approach (matching PDF/DOCX refactorings)
+- All modules have comprehensive Google-style docstrings
+- Complete type hints on all functions
+- Backward compatibility maintained via thin wrapper classes
+- 4 of 6 parsers now refactored (PDF ✅, DOCX ✅, Markdown ✅, Text ✅)
+- Remaining parsers: EPUB, HTML
+
 ### Added
 
 - **docx**: List extraction with nested list support (ordered and unordered)
