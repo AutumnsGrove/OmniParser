@@ -1,13 +1,13 @@
 """
 Content extraction for HTML documents.
 
-This module provides content extraction functionality using Trafilatura
-with Readability as a fallback, orchestrating the extraction pipeline.
+This module provides content extraction functionality using Readability
+with Trafilatura as a fallback, orchestrating the extraction pipeline.
 
 Functions:
     extract_main_content: Main orchestrator for content extraction
-    extract_with_trafilatura: Primary extraction using Trafilatura
-    extract_with_readability: Fallback extraction using Readability
+    extract_with_readability: Primary extraction using Readability
+    extract_with_trafilatura: Fallback extraction using Trafilatura
 """
 
 from typing import List, Optional, Tuple, cast
@@ -18,6 +18,9 @@ from readability import Document as ReadabilityDocument
 from ...exceptions import ParsingError
 
 # Content length thresholds for extraction validation
+MIN_CONTENT_LENGTH_READABILITY = (
+    100  # Min chars for Readability to be considered successful
+)
 MIN_CONTENT_LENGTH_TRAFILATURA = (
     100  # Min chars for Trafilatura to be considered successful
 )
@@ -28,8 +31,8 @@ def extract_main_content(html: str, options: dict) -> Tuple[str, List[str]]:
     """
     Extract main content from HTML with automatic fallback.
 
-    Tries Trafilatura first (fast, accurate), falls back to Readability
-    if Trafilatura fails or returns minimal content (<100 chars).
+    Tries Readability first (preserves heading structure), falls back to Trafilatura
+    if Readability fails or returns minimal content (<100 chars).
 
     Args:
         html: Raw HTML string to extract content from.
@@ -51,28 +54,32 @@ def extract_main_content(html: str, options: dict) -> Tuple[str, List[str]]:
     """
     warnings: List[str] = []
 
-    # Try Trafilatura first
-    extracted_html = extract_with_trafilatura(html)
+    # Try Readability first (preserves heading structure for chapter detection)
+    try:
+        extracted_html = extract_with_readability(html)
+    except ParsingError:
+        # Readability failed completely, try Trafilatura
+        extracted_html = None
 
-    # Fallback to Readability if needed
+    # Fallback to Trafilatura if needed
     if (
         not extracted_html
-        or len(extracted_html.strip()) < MIN_CONTENT_LENGTH_TRAFILATURA
+        or len(extracted_html.strip()) < MIN_CONTENT_LENGTH_READABILITY
     ):
         if extracted_html and len(extracted_html.strip()) > 0:
             warnings.append(
-                "Trafilatura extraction returned minimal content, "
-                "using Readability fallback"
+                "Readability extraction returned minimal content, "
+                "using Trafilatura fallback"
             )
         else:
-            warnings.append("Trafilatura extraction failed, using Readability fallback")
+            warnings.append("Readability extraction failed, using Trafilatura fallback")
 
-        extracted_html = extract_with_readability(html)
+        extracted_html = extract_with_trafilatura(html)
 
         # If both fail, raise error
         if not extracted_html or len(extracted_html.strip()) < MIN_CONTENT_LENGTH_TOTAL:
             raise ParsingError(
-                "Both Trafilatura and Readability failed to extract content",
+                "Both Readability and Trafilatura failed to extract content",
                 parser="HTMLParser",
             )
 
