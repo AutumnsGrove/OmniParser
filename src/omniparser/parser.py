@@ -12,7 +12,7 @@ from typing import Any, Dict, Optional
 from .exceptions import UnsupportedFormatError, FileReadError
 from .models import Document
 from .parsers.epub_parser import EPUBParser
-from .parsers.html_parser import HTMLParser
+from .parsers.html import HTMLParser
 from .parsers.pdf import parse_pdf
 from .parsers.markdown_parser import MarkdownParser
 from .parsers.docx import parse_docx

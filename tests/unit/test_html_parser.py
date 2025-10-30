@@ -14,7 +14,7 @@ import requests
 
 from omniparser.exceptions import FileReadError, NetworkError, ParsingError
 from omniparser.models import Document
-from omniparser.parsers.html_parser import HTMLParser
+from omniparser.parsers.html import HTMLParser
 from omniparser.parsers.html.content_extractor import (
     extract_with_readability,
     extract_with_trafilatura,

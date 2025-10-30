@@ -7,7 +7,7 @@ from unittest.mock import patch, Mock
 import pytest
 
 from omniparser import parse_document
-from omniparser.parsers.html_parser import HTMLParser
+from omniparser.parsers.html import HTMLParser
 from omniparser.models import Document
 from omniparser.exceptions import NetworkError, ParsingError, FileReadError
 
