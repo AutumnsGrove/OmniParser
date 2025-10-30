@@ -30,7 +30,7 @@ from .exceptions import (
 
 # Parsers (for advanced usage - users can instantiate directly if needed)
 from .parsers.epub_parser import EPUBParser
-from .parsers.html_parser import HTMLParser
+from .parsers.html import HTMLParser
 from .parsers.markdown_parser import MarkdownParser
 # Note: DOCX parser now uses functional pattern (parse_docx) - no class
 from .parsers.text_parser import TextParser

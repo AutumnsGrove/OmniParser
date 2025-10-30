@@ -7,7 +7,7 @@ from unittest.mock import patch, Mock
 import pytest
 
 from omniparser import parse_document
-from omniparser.parsers.html_parser import HTMLParser
+from omniparser.parsers.html import HTMLParser
 from omniparser.models import Document
 from omniparser.exceptions import NetworkError, ParsingError, FileReadError
 
@@ -164,7 +164,7 @@ class TestHTMLParsingIntegration:
 
     # URL Parsing Integration Tests (Mocked)
 
-    @patch("omniparser.parsers.html_parser.HTMLParser._fetch_url")
+    @patch("omniparser.parsers.html.content_fetcher.ContentFetcher.fetch_url")
     def test_parse_url_with_metadata(
         self, mock_fetch: Mock, fixtures_dir: Path
     ) -> None:
@@ -186,7 +186,7 @@ class TestHTMLParsingIntegration:
 
         mock_fetch.assert_called_once()
 
-    @patch("omniparser.parsers.html_parser.HTMLParser._fetch_url")
+    @patch("omniparser.parsers.html.content_fetcher.ContentFetcher.fetch_url")
     def test_parse_url_with_chapters(
         self, mock_fetch: Mock, fixtures_dir: Path
     ) -> None:
@@ -249,7 +249,7 @@ class TestHTMLParsingIntegration:
 
     # Error Handling Integration Tests
 
-    @patch("omniparser.parsers.html_parser.HTMLParser._fetch_url")
+    @patch("omniparser.parsers.html.content_fetcher.ContentFetcher.fetch_url")
     def test_url_timeout_error(self, mock_fetch: Mock) -> None:
         """Test NetworkError on URL timeout."""
         mock_fetch.side_effect = NetworkError("Connection timeout")
@@ -297,7 +297,7 @@ class TestHTMLParsingIntegration:
 class TestHTMLURLParsing:
     """Additional tests for URL-specific features."""
 
-    @patch("omniparser.parsers.html_parser.HTMLParser._fetch_url")
+    @patch("omniparser.parsers.html.content_fetcher.ContentFetcher.fetch_url")
     def test_parse_http_url(self, mock_fetch: Mock, fixtures_dir: Path) -> None:
         """Test parsing HTTP URL (should upgrade to HTTPS)."""
         with open(fixtures_dir / "minimal.html", "r", encoding="utf-8") as f:
@@ -310,7 +310,7 @@ class TestHTMLURLParsing:
         assert isinstance(doc, Document)
         assert doc.metadata.title == "Minimal HTML"
 
-    @patch("omniparser.parsers.html_parser.HTMLParser._fetch_url")
+    @patch("omniparser.parsers.html.content_fetcher.ContentFetcher.fetch_url")
     def test_parse_url_with_custom_timeout(
         self, mock_fetch: Mock, fixtures_dir: Path
     ) -> None:

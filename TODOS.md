@@ -69,11 +69,15 @@ Dropped in at ~11:30pm :
 - [ ] Update DOCX parser from Beta to Production-Ready
 
 #### Parser Refactoring (see REFACTORING-PARSERS.md)
-- [ ] Extract common patterns from EPUB, PDF, HTML parsers
-- [ ] Create shared image extraction module
-- [ ] Create shared metadata extraction module
-- [ ] Refactor parsers to use functional patterns
-- [ ] Update tests after refactoring
+- [x] Refactor Markdown parser to functional modules (Session 1, PR #13)
+- [x] Refactor Text parser to functional modules (Session 2, PR #13)
+- [x] Refactor PDF parser to functional modules (Session 3 - in progress)
+- [x] Refactor DOCX parser to functional modules (Session 4 - in progress)
+- [x] Refactor EPUB parser to functional modules (Session 5, PR #14)
+- [x] Refactor HTML parser to functional modules (Session 6, PR #TBD)
+- [ ] Extract common patterns across all refactored parsers
+- [ ] Create shared image extraction utilities (if beneficial)
+- [ ] Create shared metadata extraction utilities (if beneficial)
 - [ ] Verify all parsers maintain 100% test pass rate
 
 #### Production Hardening
