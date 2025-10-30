@@ -5,6 +5,13 @@
 
 ---
 
+Dropped in at ~11:30pm : 
+- Add an easy to use/run UI for the Omniparser. A very simple Webapp or something. I need a way to use/test it easily, without creating a script for it every time.
+- Create demo scripts/workflows where the omniparser could be userful. Potentially mermaid diagrams
+- Create extensive docs based on internal docstrings (things seem well formatted, this could likely be automated (?))
+- Add a table of file extensions and data types in README.md
+- Update/refactor/prettify README.md
+
 ## ✅ Recently Completed (2025-10-29)
 
 ### Phase 2.8: Markdown/Text Parsers + AI Features - COMPLETE
