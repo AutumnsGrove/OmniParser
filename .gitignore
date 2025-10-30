@@ -107,6 +107,13 @@ tests/fixtures/**/*.docx
 !tests/fixtures/epub/frankenstein.epub
 !tests/fixtures/epub/jekyll-and-hyde.epub
 
+# Allow DOCX conversions of the same 5 public domain examples
+!tests/fixtures/docx/alice-in-wonderland.docx
+!tests/fixtures/docx/pride-and-prejudice.docx
+!tests/fixtures/docx/moby-dick.docx
+!tests/fixtures/docx/frankenstein.docx
+!tests/fixtures/docx/jekyll-and-hyde.docx
+
 !tests/fixtures/.gitkeep
 !tests/fixtures/images/README.md
 

@@ -32,7 +32,7 @@ from .exceptions import (
 from .parsers.epub_parser import EPUBParser
 from .parsers.html_parser import HTMLParser
 from .parsers.markdown_parser import MarkdownParser
-from .parsers.docx_parser import DOCXParser
+# Note: DOCX parser now uses functional pattern (parse_docx) - no class
 from .parsers.text_parser import TextParser
 
 # Version
@@ -61,7 +61,7 @@ __all__ = [
     "EPUBParser",
     "HTMLParser",
     "MarkdownParser",
-    "DOCXParser",
+    # DOCXParser removed - DOCX now uses functional pattern
     "TextParser",
     # Version
     "__version__",

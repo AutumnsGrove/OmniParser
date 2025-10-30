@@ -13,7 +13,7 @@ import pytest
 
 from omniparser.exceptions import FileReadError, ParsingError, ValidationError
 from omniparser.models import Chapter, Document, ImageReference, Metadata
-from omniparser.parsers.pdf_parser import PDFParser
+from omniparser.parsers.pdf import PDFParser
 
 
 class TestPDFParserInit:
