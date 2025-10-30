@@ -22,6 +22,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Refactored
 
+- **pdf**: Modularize PDF parser into functional components (1,052 lines → 9 modules, 1,485 lines)
+  - Extract utils module with constants and helper functions (113 lines)
+  - Extract validation module for file validation and loading (87 lines)
+  - Extract metadata module for PDF metadata extraction (162 lines)
+  - Extract tables module for table extraction and markdown conversion (147 lines)
+  - Extract images module for image extraction and processing (186 lines)
+  - Extract text_extraction module with OCR support (309 lines)
+  - Extract heading_detection module for font-based heading analysis (283 lines)
+  - Create parser orchestrator for functional pipeline coordination (175 lines)
+  - Remove monolithic pdf_parser.py, update all imports to use modular structure
+  - All modules follow functional patterns (functions ≤100 lines, modules ≤309 lines)
+  - Comprehensive test suite: 122 tests, 94-100% coverage per module
+  - Breaking change: PDFParser class no longer available for direct use
 - Extract shared metadata building logic to processor
 - Extract shared image extraction logic to processor module
 
