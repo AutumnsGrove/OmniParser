@@ -11,7 +11,9 @@ from pathlib import Path
 import pytest
 
 from omniparser.exceptions import FileReadError, ValidationError
-from omniparser.parsers.epub_parser import EPUBParser, TocEntry
+from omniparser.parsers.epub_parser import EPUBParser
+from omniparser.parsers.epub.toc import TocEntry
+from omniparser.parsers.epub.utils import count_words, estimate_reading_time
 
 
 class TestEPUBParserInit:
@@ -178,41 +180,33 @@ class TestEPUBParserHelpers:
 
     def test_count_words(self) -> None:
         """Test word counting."""
-        parser = EPUBParser()
-
-        assert parser._count_words("") == 0
-        assert parser._count_words("Hello") == 1
-        assert parser._count_words("Hello world") == 2
-        assert parser._count_words("The quick brown fox") == 4
-        assert parser._count_words("Multiple   spaces   between") == 3
+        assert count_words("") == 0
+        assert count_words("Hello") == 1
+        assert count_words("Hello world") == 2
+        assert count_words("The quick brown fox") == 4
+        assert count_words("Multiple   spaces   between") == 3
 
     def test_count_words_with_punctuation(self) -> None:
         """Test word counting with punctuation."""
-        parser = EPUBParser()
-
-        assert parser._count_words("Hello, world!") == 2
-        assert parser._count_words("It's a test.") == 3
+        assert count_words("Hello, world!") == 2
+        assert count_words("It's a test.") == 3
 
     def test_estimate_reading_time(self) -> None:
         """Test reading time estimation."""
-        parser = EPUBParser()
-
         # 225 WPM average
-        assert parser._estimate_reading_time(0) == 1  # Minimum 1 minute
-        assert parser._estimate_reading_time(100) == 1
-        assert parser._estimate_reading_time(225) == 1
-        assert parser._estimate_reading_time(450) == 2
-        assert parser._estimate_reading_time(1125) == 5
-        assert parser._estimate_reading_time(45000) == 200
+        assert estimate_reading_time(0) == 1  # Minimum 1 minute
+        assert estimate_reading_time(100) == 1
+        assert estimate_reading_time(225) == 1
+        assert estimate_reading_time(450) == 2
+        assert estimate_reading_time(1125) == 5
+        assert estimate_reading_time(45000) == 200
 
     def test_estimate_reading_time_rounding(self) -> None:
         """Test reading time rounds correctly."""
-        parser = EPUBParser()
-
         # Should round to nearest minute
-        assert parser._estimate_reading_time(337) == 1  # 337/225 = 1.498 -> 1
-        assert parser._estimate_reading_time(338) == 2  # 338/225 = 1.502 -> 2
-        assert parser._estimate_reading_time(300) == 1  # 300/225 = 1.33 -> 1
+        assert estimate_reading_time(337) == 1  # 337/225 = 1.498 -> 1
+        assert estimate_reading_time(338) == 2  # 338/225 = 1.502 -> 2
+        assert estimate_reading_time(300) == 1  # 300/225 = 1.33 -> 1
 
 
 class TestEPUBParserMetadataExtraction:

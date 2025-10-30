@@ -28,34 +28,10 @@ from ..base.base_parser import BaseParser
 from ..exceptions import FileReadError, ParsingError, ValidationError
 from ..models import Chapter, Document, ImageReference, Metadata, ProcessingInfo
 from ..processors.metadata_builder import MetadataBuilder
+from .epub.toc import TocEntry
+from .epub.utils import count_words, estimate_reading_time
 
 logger = logging.getLogger(__name__)
-
-
-class TocEntry:
-    """Internal representation of a table of contents entry.
-
-    This is used during TOC parsing to build the chapter structure before
-    converting to OmniParser's Chapter model.
-
-    Attributes:
-        title: Chapter title from TOC.
-        href: EPUB internal reference (e.g., "chapter1.xhtml#section").
-        level: Heading level (1=main chapter, 2=subsection, etc.).
-        children: List of nested TocEntry objects.
-    """
-
-    def __init__(
-        self,
-        title: str,
-        href: str,
-        level: int = 1,
-        children: Optional[List["TocEntry"]] = None,
-    ):
-        self.title = title
-        self.href = href
-        self.level = level
-        self.children = children or []
 
 
 class EPUBParser(BaseParser):
@@ -194,8 +170,8 @@ class EPUBParser(BaseParser):
                     chapter.content = self.clean_text(chapter.content)
 
             # Step 8: Calculate statistics
-            word_count = self._count_words(content)
-            reading_time = self._estimate_reading_time(word_count)
+            word_count = count_words(content)
+            reading_time = estimate_reading_time(word_count)
 
             # Step 9: Create processing info
             processing_time = time.time() - self._start_time
@@ -1026,28 +1002,3 @@ class EPUBParser(BaseParser):
                 # Continue with next image - don't fail entire extraction
 
         return images
-
-    def _count_words(self, text: str) -> int:
-        """Count words in text.
-
-        Args:
-            text: Text to count words in.
-
-        Returns:
-            Word count.
-        """
-        return len(text.split())
-
-    def _estimate_reading_time(self, word_count: int) -> int:
-        """Estimate reading time in minutes.
-
-        Assumes average reading speed of 200-250 words per minute.
-        Uses 225 WPM as middle ground.
-
-        Args:
-            word_count: Total word count.
-
-        Returns:
-            Estimated reading time in minutes.
-        """
-        return max(1, round(word_count / 225))
