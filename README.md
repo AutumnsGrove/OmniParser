@@ -19,7 +19,7 @@
 | 📖 EPUB | ✅ **Production** | TOC chapters, images, metadata extraction |
 | 🌐 HTML/URL | ✅ **Production** | Semantic parsing, URL support, images |
 | 📄 PDF | ✅ **Production** | Multi-column layout, images, tables |
-| 📝 DOCX | 🔶 **Beta** | Text extraction, tables, basic images |
+| 📝 DOCX | ✅ **Production** | Text extraction, tables, lists, hyperlinks, images |
 | 📋 Markdown | ✅ **Production** | Frontmatter, code blocks, link preservation |
 | 📃 Text | ✅ **Production** | Auto chapter detection, encoding handling |
 

@@ -7,15 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **docx**: List extraction with nested list support (ordered and unordered)
+- **docx**: Hyperlink extraction and markdown `[text](url)` formatting
+- **docx**: DOCX test fixtures (5 public domain books from Project Gutenberg)
+
+### Changed
+
+- **docx**: Promoted from 🔶 Beta to ✅ Production-Ready
+- **docx**: Enhanced feature set: text, tables, lists, hyperlinks, images, metadata
+- Update README.md to reflect DOCX production-ready status
+
 ### Documentation
 
-- Update CHANGELOG.md
+- Update CHANGELOG.md with DOCX refactoring details
 - Consolidate CHANGELOG with 9 duplicate sections from merges
 - Update README to reflect 6 parsers and AI features (Phase 2.8)
 - Update CLAUDE.md project overview to Phase 2.8
 - Update NEXT_STEPS.md with Phase 2.8 completion and future roadmap
 - Update TODOS.md to reflect Phase 2.8 completion
-- Document DOCX parser beta status and limitations
+- Update DOCX parser status from beta to production
 - Add comprehensive parser refactoring plan (Phase 3.0)
 - Add CHANGELOG management strategy to prevent future corruption
 - Add cleanup completion report (Phase 2.9)
@@ -35,6 +47,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All modules follow functional patterns (functions ≤100 lines, modules ≤309 lines)
   - Comprehensive test suite: 122 tests, 94-100% coverage per module
   - Breaking change: PDFParser class no longer available for direct use
+- **docx**: Modularize DOCX parser into functional components (755 lines → 12 modules, 1,759 lines)
+  - Extract validation module for file validation and document loading (102 lines)
+  - Extract metadata module for core properties extraction (119 lines)
+  - Extract tables module for table-to-markdown conversion (98 lines)
+  - Extract headings module for heading detection (90 lines)
+  - Extract paragraphs module for paragraph/run formatting (109 lines)
+  - Extract images module for image extraction with shared utilities (231 lines)
+  - Extract utils module for word count and reading time (114 lines)
+  - Extract content_extraction module for orchestration (202 lines)
+  - **NEW:** Implement lists module for list detection and markdown formatting (195 lines)
+  - **NEW:** Implement hyperlinks module for hyperlink extraction (197 lines)
+  - Create parse_docx() orchestrator following functional pattern (182 lines)
+  - Remove monolithic docx_parser.py (755 lines deleted)
+  - Comprehensive test suite: 45 tests (23 lists + 22 hyperlinks)
+  - Net code reduction: 395 lines saved through deduplication
+  - Breaking change: DOCXParser class no longer available for direct use
 - Extract shared metadata building logic to processor
 - Extract shared image extraction logic to processor module
 
