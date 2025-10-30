@@ -111,7 +111,7 @@ def build_html_document(
 
     # Create processing info
     processing_info = ProcessingInfo(
-        parser_used="HTMLParser",
+        parser_used="html",
         parser_version="0.1.0",
         processing_time=0.0,  # Will be updated by caller
         timestamp=datetime.now(),
