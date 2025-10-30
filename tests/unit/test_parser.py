@@ -112,32 +112,34 @@ class TestParseDocument:
             MockParser.assert_called_once_with(options)
 
     def test_parse_document_pdf_format(self, tmp_path):
-        """Test that PDF files are routed to PDFParser."""
+        """Test that PDF files are routed to parse_pdf function."""
         test_file = tmp_path / "test.pdf"
         test_file.write_text("dummy content")
 
-        with patch("omniparser.parser.PDFParser") as MockParser:
-            mock_parser_instance = Mock()
+        with patch("omniparser.parser.parse_pdf") as mock_parse_pdf:
             mock_doc = Mock(spec=Document)
-            mock_parser_instance.parse.return_value = mock_doc
-            MockParser.return_value = mock_parser_instance
+            mock_parse_pdf.return_value = mock_doc
 
             result = parse_document(test_file)
 
-            # Verify PDFParser was instantiated and used
-            MockParser.assert_called_once_with(None)
-            mock_parser_instance.parse.assert_called_once()
+            # Verify parse_pdf was called
+            mock_parse_pdf.assert_called_once()
             assert result == mock_doc
 
-    def test_parse_document_unsupported_docx(self, tmp_path):
-        """Test that DOCX files raise UnsupportedFormatError."""
+    def test_parse_document_docx_format(self, tmp_path):
+        """Test that DOCX files are routed to parse_docx function."""
         test_file = tmp_path / "test.docx"
         test_file.write_text("dummy content")
 
-        with pytest.raises(
-            UnsupportedFormatError, match="DOCX format not yet implemented"
-        ):
-            parse_document(test_file)
+        with patch("omniparser.parser.parse_docx") as mock_parse_docx:
+            mock_doc = Mock(spec=Document)
+            mock_parse_docx.return_value = mock_doc
+
+            result = parse_document(test_file)
+
+            # Verify parse_docx was called
+            mock_parse_docx.assert_called_once()
+            assert result == mock_doc
 
     def test_parse_document_unsupported_doc(self, tmp_path):
         """Test that DOC files raise UnsupportedFormatError."""
@@ -145,7 +147,7 @@ class TestParseDocument:
         test_file.write_text("dummy content")
 
         with pytest.raises(
-            UnsupportedFormatError, match="DOCX format not yet implemented"
+            UnsupportedFormatError, match="Unsupported file format: .doc"
         ):
             parse_document(test_file)
 
@@ -185,25 +187,41 @@ class TestParseDocument:
             mock_parser_instance.parse.assert_called_once()
             assert result == mock_doc
 
-    def test_parse_document_unsupported_markdown(self, tmp_path):
-        """Test that Markdown files raise UnsupportedFormatError."""
+    def test_parse_document_markdown_format(self, tmp_path):
+        """Test that Markdown files are routed to MarkdownParser."""
         test_file = tmp_path / "test.md"
-        test_file.write_text("dummy content")
+        test_file.write_text("# Test\n\nDummy content")
 
-        with pytest.raises(
-            UnsupportedFormatError, match="Markdown format not yet implemented"
-        ):
-            parse_document(test_file)
+        with patch("omniparser.parser.MarkdownParser") as MockParser:
+            mock_parser_instance = Mock()
+            mock_doc = Mock(spec=Document)
+            mock_parser_instance.parse.return_value = mock_doc
+            MockParser.return_value = mock_parser_instance
 
-    def test_parse_document_unsupported_txt(self, tmp_path):
-        """Test that TXT files raise UnsupportedFormatError."""
+            result = parse_document(test_file)
+
+            # Verify MarkdownParser was instantiated and used
+            MockParser.assert_called_once_with(None)
+            mock_parser_instance.parse.assert_called_once()
+            assert result == mock_doc
+
+    def test_parse_document_txt_format(self, tmp_path):
+        """Test that TXT files are routed to TextParser."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("dummy content")
 
-        with pytest.raises(
-            UnsupportedFormatError, match="Text format not yet implemented"
-        ):
-            parse_document(test_file)
+        with patch("omniparser.parser.TextParser") as MockParser:
+            mock_parser_instance = Mock()
+            mock_doc = Mock(spec=Document)
+            mock_parser_instance.parse.return_value = mock_doc
+            MockParser.return_value = mock_parser_instance
+
+            result = parse_document(test_file)
+
+            # Verify TextParser was instantiated and used
+            MockParser.assert_called_once_with(None)
+            mock_parser_instance.parse.assert_called_once()
+            assert result == mock_doc
 
     def test_parse_document_unknown_format(self, tmp_path):
         """Test that unknown file formats raise UnsupportedFormatError."""
@@ -247,9 +265,9 @@ class TestGetSupportedFormats:
         assert ".epub" in formats
 
     def test_get_supported_formats_includes_html(self):
-        """Test that EPUB, PDF, and HTML formats are supported currently."""
+        """Test that all 8 formats are supported currently."""
         formats = get_supported_formats()
-        assert formats == [".epub", ".pdf", ".html", ".htm"]
+        assert formats == [".epub", ".pdf", ".html", ".htm", ".docx", ".md", ".markdown", ".txt"]
 
 
 class TestIsFormatSupported:
@@ -278,13 +296,13 @@ class TestIsFormatSupported:
         assert is_format_supported("doc.pdf") is True
         assert is_format_supported("page.html") is True
         assert is_format_supported("page.htm") is True
+        assert is_format_supported("doc.docx") is True
+        assert is_format_supported("readme.md") is True
+        assert is_format_supported("readme.markdown") is True
+        assert is_format_supported("notes.txt") is True
 
-        # Unsupported (but planned)
-        assert is_format_supported("doc.docx") is False
-        assert is_format_supported("readme.md") is False
-        assert is_format_supported("notes.txt") is False
-
-        # Unknown
+        # Unsupported
+        assert is_format_supported("file.doc") is False
         assert is_format_supported("file.xyz") is False
 
 
@@ -341,7 +359,7 @@ class TestImports:
         from omniparser import __version__
 
         assert isinstance(__version__, str)
-        assert __version__ == "1.0.0"
+        assert __version__ == "0.3.0"
 
     def test_import_utility_functions(self):
         """Test that utility functions can be imported."""
