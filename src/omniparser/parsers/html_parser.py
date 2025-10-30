@@ -20,6 +20,7 @@ from ..models import Document
 from .html.content_extractor import extract_main_content
 from .html.content_fetcher import ContentFetcher
 from .html.document_builder import build_html_document
+from .html.url_validator import is_url, supports_html_format
 
 logger = logging.getLogger(__name__)
 
@@ -82,12 +83,10 @@ class HTMLParser(BaseParser):
 
         # Determine if URL or local file
         file_path_str = str(file_path)
-        is_url = file_path_str.startswith("http://") or file_path_str.startswith(
-            "https://"
-        )
+        is_url_source = is_url(file_path)
 
         # Fetch HTML content
-        if is_url:
+        if is_url_source:
             html_content = self.content_fetcher.fetch_url(file_path_str)
             source_identifier = file_path_str
         else:
@@ -128,12 +127,4 @@ class HTMLParser(BaseParser):
         Returns:
             True if file is .html, .htm, or URL (http/https), False otherwise.
         """
-        file_path_str = str(file_path).lower()
-
-        # Check if URL
-        if file_path_str.startswith("http://") or file_path_str.startswith("https://"):
-            return True
-
-        # Check file extension
-        path_obj = Path(file_path_str)
-        return path_obj.suffix.lower() in [".html", ".htm"]
+        return supports_html_format(file_path)
