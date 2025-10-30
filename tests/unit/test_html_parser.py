@@ -15,6 +15,12 @@ import requests
 from omniparser.exceptions import FileReadError, NetworkError, ParsingError
 from omniparser.models import Document
 from omniparser.parsers.html_parser import HTMLParser
+from omniparser.parsers.html.image_extractor import (
+    download_image,
+    extract_images,
+    get_image_format,
+    resolve_image_url,
+)
 
 
 @pytest.fixture
@@ -1031,14 +1037,16 @@ class TestHTMLParserImageExtraction:
         </body></html>
         """
 
-        with patch("omniparser.parsers.html_parser.requests.get") as mock_get:
+        with patch("omniparser.parsers.html.image_extractor.requests.get") as mock_get:
             # Mock image downloads
             mock_response = Mock()
             mock_response.content = b"fake_image_data"
             mock_response.iter_content = Mock(return_value=[b"fake_image_data"])
             mock_get.return_value = mock_response
 
-            with patch("omniparser.parsers.html_parser.Image.open") as mock_image:
+            with patch(
+                "omniparser.parsers.html.image_extractor.Image.open"
+            ) as mock_image:
                 # Mock image dimensions
                 mock_img = Mock()
                 mock_img.size = (800, 600)
@@ -1046,8 +1054,12 @@ class TestHTMLParserImageExtraction:
                 mock_image.return_value.__enter__ = Mock(return_value=mock_img)
                 mock_image.return_value.__exit__ = Mock(return_value=None)
 
-                images = html_parser._extract_images(
-                    html, base_url="http://example.com"
+                images = extract_images(
+                    html,
+                    base_url="http://example.com",
+                    options=html_parser.options,
+                    apply_rate_limit=html_parser._apply_rate_limit,
+                    build_headers=html_parser._build_headers,
                 )
 
                 # Should extract 3 images (skip data URI)
@@ -1065,12 +1077,12 @@ class TestHTMLParserImageExtraction:
         """Test resolving absolute URLs returns them unchanged."""
         # HTTP URL
         http_url = "http://example.com/image.jpg"
-        result = html_parser._resolve_image_url(http_url, base_url="http://other.com")
+        result = resolve_image_url(http_url, base_url="http://other.com")
         assert result == http_url
 
         # HTTPS URL
         https_url = "https://cdn.example.com/photo.png"
-        result = html_parser._resolve_image_url(https_url, base_url="https://other.com")
+        result = resolve_image_url(https_url, base_url="https://other.com")
         assert result == https_url
 
     def test_resolve_image_url_relative(self, html_parser: HTMLParser) -> None:
@@ -1078,24 +1090,22 @@ class TestHTMLParserImageExtraction:
         base_url = "https://example.com/articles/page.html"
 
         # Root-relative path
-        result = html_parser._resolve_image_url("/images/photo.jpg", base_url)
+        result = resolve_image_url("/images/photo.jpg", base_url)
         assert result == "https://example.com/images/photo.jpg"
 
         # Relative path (same directory)
-        result = html_parser._resolve_image_url("photo.png", base_url)
+        result = resolve_image_url("photo.png", base_url)
         assert result == "https://example.com/articles/photo.png"
 
         # Parent directory path
         base_url2 = "https://example.com/articles/2024/page.html"
-        result = html_parser._resolve_image_url("../images/pic.jpg", base_url2)
+        result = resolve_image_url("../images/pic.jpg", base_url2)
         assert result == "https://example.com/articles/images/pic.jpg"
 
     def test_resolve_image_url_protocol_relative(self, html_parser: HTMLParser) -> None:
         """Test resolving protocol-relative URLs."""
         protocol_relative = "//cdn.example.com/image.jpg"
-        result = html_parser._resolve_image_url(
-            protocol_relative, base_url="https://example.com"
-        )
+        result = resolve_image_url(protocol_relative, base_url="https://example.com")
 
         # Should add https: protocol
         assert result == "https://cdn.example.com/image.jpg"
@@ -1103,7 +1113,7 @@ class TestHTMLParserImageExtraction:
     def test_resolve_image_url_data_uri(self, html_parser: HTMLParser) -> None:
         """Test data URIs are returned unchanged."""
         data_uri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-        result = html_parser._resolve_image_url(data_uri, base_url="http://example.com")
+        result = resolve_image_url(data_uri, base_url="http://example.com")
 
         # Data URI should be returned as-is
         assert result == data_uri
@@ -1113,22 +1123,30 @@ class TestHTMLParserImageExtraction:
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "test_image.jpg"
 
-            with patch("omniparser.parsers.html_parser.requests.get") as mock_get:
+            with patch(
+                "omniparser.parsers.html.image_extractor.requests.get"
+            ) as mock_get:
                 # Mock successful download
                 mock_response = Mock()
                 mock_response.content = b"fake_jpeg_data"
                 mock_response.iter_content = Mock(return_value=[b"fake_jpeg_data"])
                 mock_get.return_value = mock_response
 
-                with patch("omniparser.parsers.html_parser.Image.open") as mock_image:
+                with patch(
+                    "omniparser.parsers.html.image_extractor.Image.open"
+                ) as mock_image:
                     # Mock Pillow image
                     mock_img = Mock()
                     mock_img.size = (1920, 1080)
                     mock_image.return_value.__enter__ = Mock(return_value=mock_img)
                     mock_image.return_value.__exit__ = Mock(return_value=None)
 
-                    dimensions = html_parser._download_image(
-                        "http://example.com/image.jpg", output_path
+                    dimensions = download_image(
+                        "http://example.com/image.jpg",
+                        output_path,
+                        options=html_parser.options,
+                        apply_rate_limit=html_parser._apply_rate_limit,
+                        build_headers=html_parser._build_headers,
                     )
 
                     # Verify dimensions returned
@@ -1152,12 +1170,18 @@ class TestHTMLParserImageExtraction:
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "timeout_image.jpg"
 
-            with patch("omniparser.parsers.html_parser.requests.get") as mock_get:
+            with patch(
+                "omniparser.parsers.html.image_extractor.requests.get"
+            ) as mock_get:
                 # Mock timeout
                 mock_get.side_effect = requests.Timeout("Connection timeout")
 
-                dimensions = html_parser._download_image(
-                    "http://slow.example.com/image.jpg", output_path
+                dimensions = download_image(
+                    "http://slow.example.com/image.jpg",
+                    output_path,
+                    options=html_parser.options,
+                    apply_rate_limit=html_parser._apply_rate_limit,
+                    build_headers=html_parser._build_headers,
                 )
 
                 # Should return None on timeout (graceful failure)
@@ -1171,12 +1195,18 @@ class TestHTMLParserImageExtraction:
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "error_image.jpg"
 
-            with patch("omniparser.parsers.html_parser.requests.get") as mock_get:
+            with patch(
+                "omniparser.parsers.html.image_extractor.requests.get"
+            ) as mock_get:
                 # Mock HTTP error
                 mock_get.side_effect = requests.HTTPError("404 Not Found")
 
-                dimensions = html_parser._download_image(
-                    "http://example.com/missing.jpg", output_path
+                dimensions = download_image(
+                    "http://example.com/missing.jpg",
+                    output_path,
+                    options=html_parser.options,
+                    apply_rate_limit=html_parser._apply_rate_limit,
+                    build_headers=html_parser._build_headers,
                 )
 
                 # Should return None on HTTP error (graceful failure)
@@ -1188,7 +1218,9 @@ class TestHTMLParserImageExtraction:
             test_file = Path(tmpdir) / "test.jpg"
 
             # Create a mock file and test format detection
-            with patch("omniparser.parsers.html_parser.Image.open") as mock_image:
+            with patch(
+                "omniparser.parsers.html.image_extractor.Image.open"
+            ) as mock_image:
                 # Mock JPEG format
                 mock_img = Mock()
                 mock_img.format = "JPEG"
@@ -1198,19 +1230,21 @@ class TestHTMLParserImageExtraction:
                 # Create dummy file
                 test_file.write_bytes(b"fake_image_data")
 
-                format_result = html_parser._get_image_format(test_file)
+                format_result = get_image_format(test_file)
                 assert format_result == "jpeg"
 
             # Test PNG format
             test_file2 = Path(tmpdir) / "test.png"
-            with patch("omniparser.parsers.html_parser.Image.open") as mock_image:
+            with patch(
+                "omniparser.parsers.html.image_extractor.Image.open"
+            ) as mock_image:
                 mock_img = Mock()
                 mock_img.format = "PNG"
                 mock_image.return_value.__enter__ = Mock(return_value=mock_img)
                 mock_image.return_value.__exit__ = Mock(return_value=None)
 
                 test_file2.write_bytes(b"fake_png_data")
-                format_result = html_parser._get_image_format(test_file2)
+                format_result = get_image_format(test_file2)
                 assert format_result == "png"
 
             # Test invalid file (returns "unknown")
@@ -1218,10 +1252,10 @@ class TestHTMLParserImageExtraction:
             invalid_file.write_text("not an image")
 
             with patch(
-                "omniparser.parsers.html_parser.Image.open",
+                "omniparser.parsers.html.image_extractor.Image.open",
                 side_effect=Exception("Cannot identify image file"),
             ):
-                format_result = html_parser._get_image_format(invalid_file)
+                format_result = get_image_format(invalid_file)
                 assert format_result == "unknown"
 
     def test_parse_with_images_enabled(self, html_parser: HTMLParser) -> None:
@@ -1248,13 +1282,17 @@ class TestHTMLParserImageExtraction:
             tmp_path = Path(tmp.name)
 
         try:
-            with patch("omniparser.parsers.html_parser.requests.get") as mock_get:
+            with patch(
+                "omniparser.parsers.html.image_extractor.requests.get"
+            ) as mock_get:
                 mock_response = Mock()
                 mock_response.content = b"fake_image"
                 mock_response.iter_content = Mock(return_value=[b"fake_image"])
                 mock_get.return_value = mock_response
 
-                with patch("omniparser.parsers.html_parser.Image.open") as mock_image:
+                with patch(
+                    "omniparser.parsers.html.image_extractor.Image.open"
+                ) as mock_image:
                     mock_img = Mock()
                     mock_img.size = (640, 480)
                     mock_img.format = "JPEG"
@@ -1331,14 +1369,16 @@ class TestHTMLParserImageExtraction:
                 tmp_path = Path(tmp.name)
 
             try:
-                with patch("omniparser.parsers.html_parser.requests.get") as mock_get:
+                with patch(
+                    "omniparser.parsers.html.image_extractor.requests.get"
+                ) as mock_get:
                     mock_response = Mock()
                     mock_response.content = b"fake_image"
                     mock_response.iter_content = Mock(return_value=[b"fake_image"])
                     mock_get.return_value = mock_response
 
                     with patch(
-                        "omniparser.parsers.html_parser.Image.open"
+                        "omniparser.parsers.html.image_extractor.Image.open"
                     ) as mock_image:
                         mock_img = Mock()
                         mock_img.size = (800, 600)
@@ -1402,21 +1442,27 @@ class TestHTMLParserParallelImageDownload:
         </body></html>
         """
 
-        with patch("omniparser.parsers.html_parser.requests.get") as mock_get:
+        with patch("omniparser.parsers.html.image_extractor.requests.get") as mock_get:
             mock_response = Mock()
             mock_response.content = b"fake_image"
             mock_response.iter_content = Mock(return_value=[b"fake_image"])
             mock_get.return_value = mock_response
 
-            with patch("omniparser.parsers.html_parser.Image.open") as mock_image:
+            with patch(
+                "omniparser.parsers.html.image_extractor.Image.open"
+            ) as mock_image:
                 mock_img = Mock()
                 mock_img.size = (800, 600)
                 mock_img.format = "JPEG"
                 mock_image.return_value.__enter__ = Mock(return_value=mock_img)
                 mock_image.return_value.__exit__ = Mock(return_value=None)
 
-                images = html_parser._extract_images(
-                    html, base_url="http://example.com"
+                images = extract_images(
+                    html,
+                    base_url="http://example.com",
+                    options=html_parser.options,
+                    apply_rate_limit=html_parser._apply_rate_limit,
+                    build_headers=html_parser._build_headers,
                 )
 
                 # Verify images are returned with sequential IDs
@@ -1447,7 +1493,9 @@ class TestHTMLParserParallelImageDownload:
 
         call_count = [0]
 
-        def mock_download_side_effect(url, output_path):
+        def mock_download_side_effect(
+            url, output_path, options=None, apply_rate_limit=None, build_headers=None
+        ):
             """Mock download that fails on second image."""
             call_count[0] += 1
             if "bad" in url:
@@ -1458,17 +1506,24 @@ class TestHTMLParserParallelImageDownload:
                 output_path.write_bytes(b"fake_image")
                 return (800, 600)
 
-        with patch.object(
-            html_parser, "_download_image", side_effect=mock_download_side_effect
+        with patch(
+            "omniparser.parsers.html.image_extractor.download_image",
+            side_effect=mock_download_side_effect,
         ):
-            with patch("omniparser.parsers.html_parser.Image.open") as mock_image:
+            with patch(
+                "omniparser.parsers.html.image_extractor.Image.open"
+            ) as mock_image:
                 mock_img = Mock()
                 mock_img.format = "JPEG"
                 mock_image.return_value.__enter__ = Mock(return_value=mock_img)
                 mock_image.return_value.__exit__ = Mock(return_value=None)
 
-                images = html_parser._extract_images(
-                    html, base_url="http://example.com"
+                images = extract_images(
+                    html,
+                    base_url="http://example.com",
+                    options=html_parser.options,
+                    apply_rate_limit=html_parser._apply_rate_limit,
+                    build_headers=html_parser._build_headers,
                 )
 
                 # Should successfully download 2 images (skipping the failed one)
@@ -1489,7 +1544,9 @@ class TestHTMLParserParallelImageDownload:
         </body></html>
         """
 
-        def mock_download_with_timeout(url, output_path):
+        def mock_download_with_timeout(
+            url, output_path, options=None, apply_rate_limit=None, build_headers=None
+        ):
             """Mock download that times out on slow URL."""
             if "slow" in url:
                 # Simulate timeout - return None
@@ -1498,17 +1555,24 @@ class TestHTMLParserParallelImageDownload:
                 output_path.write_bytes(b"fake_image")
                 return (640, 480)
 
-        with patch.object(
-            html_parser, "_download_image", side_effect=mock_download_with_timeout
+        with patch(
+            "omniparser.parsers.html.image_extractor.download_image",
+            side_effect=mock_download_with_timeout,
         ):
-            with patch("omniparser.parsers.html_parser.Image.open") as mock_image:
+            with patch(
+                "omniparser.parsers.html.image_extractor.Image.open"
+            ) as mock_image:
                 mock_img = Mock()
                 mock_img.format = "JPEG"
                 mock_image.return_value.__enter__ = Mock(return_value=mock_img)
                 mock_image.return_value.__exit__ = Mock(return_value=None)
 
-                images = html_parser._extract_images(
-                    html, base_url="http://example.com"
+                images = extract_images(
+                    html,
+                    base_url="http://example.com",
+                    options=html_parser.options,
+                    apply_rate_limit=html_parser._apply_rate_limit,
+                    build_headers=html_parser._build_headers,
                 )
 
                 # Should successfully download 2 fast images, skip timeout
