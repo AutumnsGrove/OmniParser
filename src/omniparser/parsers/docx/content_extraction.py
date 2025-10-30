@@ -22,6 +22,7 @@ from docx.text.paragraph import Paragraph
 
 from .paragraphs import convert_paragraph
 from .tables import convert_table
+from .lists import is_list_item, format_list_item
 
 
 def extract_content(
@@ -37,7 +38,7 @@ def extract_content(
     - Tables (as markdown tables if extract_tables=True)
     - Headings (as markdown headings # ## ###)
 
-    Note: Lists and hyperlinks will be added in Phase 3.
+    Note: List extraction is now supported (beta). Hyperlinks will be added in Phase 3.
 
     The function iterates through all document elements in order, processing
     paragraphs and tables sequentially to preserve document structure.
@@ -75,13 +76,22 @@ def extract_content(
         # Check if it's a paragraph
         if isinstance(element, CT_P):
             para = Paragraph(element, docx)
-            markdown_text = convert_paragraph(
-                para,
-                heading_styles=heading_styles,
-                preserve_formatting=preserve_formatting,
-            )
-            if markdown_text.strip():  # Skip empty paragraphs
-                markdown_parts.append(markdown_text)
+
+            # Check if it's a list item (beta feature)
+            if is_list_item(para):
+                text = para.text.strip()
+                if text:
+                    markdown_text = format_list_item(para, text)
+                    markdown_parts.append(markdown_text)
+            else:
+                # Regular paragraph processing
+                markdown_text = convert_paragraph(
+                    para,
+                    heading_styles=heading_styles,
+                    preserve_formatting=preserve_formatting,
+                )
+                if markdown_text.strip():  # Skip empty paragraphs
+                    markdown_parts.append(markdown_text)
 
         # Check if it's a table
         elif isinstance(element, CT_Tbl):
@@ -92,7 +102,6 @@ def extract_content(
                     markdown_parts.append(markdown_table)
                     markdown_parts.append("")  # Add blank line after table
 
-        # TODO: Phase 3 - Add list handling
         # TODO: Phase 3 - Add hyperlink extraction
 
     # Join all parts with double newlines
