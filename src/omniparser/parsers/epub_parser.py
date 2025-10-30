@@ -12,7 +12,6 @@ Ported and adapted from epub2tts project with TTS-specific features removed.
 # Standard library
 import logging
 import re
-import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -21,13 +20,13 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 # Third-party
 import ebooklib
 from ebooklib import epub
-from PIL import Image
 
 # Local
 from ..base.base_parser import BaseParser
 from ..exceptions import FileReadError, ParsingError, ValidationError
 from ..models import Chapter, Document, ImageReference, Metadata, ProcessingInfo
 from ..processors.metadata_builder import MetadataBuilder
+from .epub.images import extract_epub_images
 from .epub.loading import load_epub
 from .epub.metadata import extract_epub_metadata
 from .epub.toc import TocEntry, extract_toc, parse_toc_item
@@ -648,8 +647,9 @@ class EPUBParser(BaseParser):
     def extract_images(self, file_path: Union[Path, str]) -> List[ImageReference]:
         """Extract images from EPUB file.
 
-        Extracts all images from the EPUB and saves them to either a temporary
-        directory (default) or a persistent directory if image_output_dir option is set.
+        Delegates to the modular image extraction function in the images module.
+        Images are saved to either a temporary directory (default) or a persistent
+        directory if image_output_dir option is set.
 
         Args:
             file_path: Path to EPUB file.
@@ -677,42 +677,17 @@ class EPUBParser(BaseParser):
             logger.info(f"Loading EPUB for image extraction: {file_path}")
             book = self._load_epub(file_path)
 
-            # Get all image items from EPUB
-            image_items = list(book.get_items_of_type(ebooklib.ITEM_IMAGE))
-
-            if not image_items:
-                logger.info("No images found in EPUB")
-                return []
-
-            logger.info(f"Found {len(image_items)} images in EPUB")
-
-            # Determine output directory
+            # Get output directory from options
             image_output_dir = self.options.get("image_output_dir")
-            use_persistent_dir = image_output_dir is not None
+            output_path = (
+                Path(image_output_dir) if image_output_dir is not None else None
+            )
 
-            if use_persistent_dir:
-                # Convert to Path and create directory
-                output_path = Path(image_output_dir)
-                output_path.mkdir(parents=True, exist_ok=True)
-                logger.info(f"Saving images to persistent directory: {output_path}")
-
-                # Extract images to persistent directory
-                images = self._extract_images_to_directory(image_items, output_path)
-                logger.info(
-                    f"Successfully extracted {len(images)} images to {output_path}"
-                )
-                return images
-            else:
-                # Use temporary directory with context manager for safe cleanup
-                logger.info("Saving images to temporary directory (will be deleted)")
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    temp_path = Path(temp_dir)
-                    images = self._extract_images_to_directory(image_items, temp_path)
-                    logger.info(f"Successfully extracted {len(images)} images")
-                    return images
+            # Delegate to modular image extraction function
+            return extract_epub_images(book, output_path, self._warnings)
 
         except ParsingError:
-            # Re-raise ParsingError from _load_epub
+            # Re-raise ParsingError
             raise
         except Exception as e:
             logger.error(f"Image extraction failed: {e}")
@@ -721,77 +696,3 @@ class EPUBParser(BaseParser):
                 parser="EPUBParser",
                 original_error=e,
             )
-
-    def _extract_images_to_directory(
-        self, image_items: List, output_path: Path
-    ) -> List[ImageReference]:
-        """Extract images to specified directory.
-
-        Helper method that performs the actual image extraction and saves to
-        the provided directory path. Uses shared image_extractor utilities.
-
-        Args:
-            image_items: List of EPUB image items from ebooklib.
-            output_path: Directory path to save images to.
-
-        Returns:
-            List of ImageReference objects with file paths pointing to saved images.
-        """
-        from ..processors.image_extractor import (
-            get_image_dimensions,
-            save_image,
-            validate_image_data,
-        )
-
-        images: List[ImageReference] = []
-
-        for idx, item in enumerate(image_items, start=1):
-            try:
-                # Get image metadata
-                image_name = item.get_name()  # e.g., "images/cover.jpg"
-                image_content = item.get_content()  # bytes
-
-                # Validate image data (no minimum size for EPUB - icons can be small)
-                is_valid, error = validate_image_data(image_content, min_size=1)
-                if not is_valid:
-                    logger.warning(f"Skipping invalid image {image_name}: {error}")
-                    self._warnings.append(
-                        f"Skipped invalid image {image_name}: {error}"
-                    )
-                    continue
-
-                # Save image (preserves subdirectory structure)
-                image_path, format_name = save_image(
-                    image_content,
-                    output_path,
-                    preserve_subdirs=True,
-                    original_path=image_name,
-                    counter=idx,
-                )
-
-                # Get image dimensions
-                width, height, detected_format = get_image_dimensions(image_content)
-                if detected_format != "unknown":
-                    format_name = detected_format
-
-                # Create ImageReference
-                image_ref = ImageReference(
-                    image_id=f"img_{idx:03d}",
-                    position=0,  # We don't track exact position
-                    file_path=str(image_path),
-                    alt_text=None,  # Would require HTML parsing
-                    size=(width, height) if width and height else None,
-                    format=format_name,
-                )
-
-                images.append(image_ref)
-                logger.debug(
-                    f"Extracted image {idx}: {image_name} ({format_name}, {width}x{height})"
-                )
-
-            except Exception as e:
-                logger.warning(f"Failed to extract image {idx}: {e}")
-                self._warnings.append(f"Failed to extract image: {e}")
-                # Continue with next image - don't fail entire extraction
-
-        return images
