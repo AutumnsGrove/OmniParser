@@ -60,8 +60,10 @@ class MarkdownParser(BaseParser):
         super().__init__(options)
 
         # Set default options
+        self.options.setdefault("extract_frontmatter", True)
         self.options.setdefault("extract_images", True)
         self.options.setdefault("normalize_headings", True)
+        self.options.setdefault("detect_chapters", True)
         self.options.setdefault("min_chapter_level", 1)
         self.options.setdefault("max_chapter_level", 2)
 
