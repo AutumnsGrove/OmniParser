@@ -15,6 +15,10 @@ import requests
 from omniparser.exceptions import FileReadError, NetworkError, ParsingError
 from omniparser.models import Document
 from omniparser.parsers.html_parser import HTMLParser
+from omniparser.parsers.html.content_extractor import (
+    extract_with_readability,
+    extract_with_trafilatura,
+)
 from omniparser.parsers.html.image_extractor import (
     download_image,
     extract_images,
@@ -430,7 +434,7 @@ class TestHTMLParserExtractContent:
         self, html_parser: HTMLParser, simple_html: str
     ) -> None:
         """Test Trafilatura extraction with valid HTML."""
-        result = html_parser._extract_content_trafilatura(simple_html)
+        result = extract_with_trafilatura(simple_html)
 
         # Trafilatura may or may not extract content depending on quality
         # We just verify it doesn't crash and returns string or None
@@ -453,7 +457,7 @@ class TestHTMLParserExtractContent:
         </body>
         </html>
         """
-        result = html_parser._extract_content_trafilatura(html)
+        result = extract_with_trafilatura(html)
 
         # Trafilatura should extract article content
         assert result is None or isinstance(result, str)
@@ -467,14 +471,14 @@ class TestHTMLParserExtractContent:
         malformed_html = "<html><body><p>Unclosed paragraph"
 
         # Should not raise exception
-        result = html_parser._extract_content_trafilatura(malformed_html)
+        result = extract_with_trafilatura(malformed_html)
         assert result is None or isinstance(result, str)
 
     def test_extract_content_readability_success(
         self, html_parser: HTMLParser, simple_html: str
     ) -> None:
         """Test Readability extraction with valid HTML."""
-        result = html_parser._extract_content_readability(simple_html)
+        result = extract_with_readability(simple_html)
 
         assert isinstance(result, str)
         assert len(result) > 0
@@ -496,7 +500,7 @@ class TestHTMLParserExtractContent:
         </body>
         </html>
         """
-        result = html_parser._extract_content_readability(html)
+        result = extract_with_readability(html)
 
         assert isinstance(result, str)
         assert len(result) > 0

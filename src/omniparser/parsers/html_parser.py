@@ -16,10 +16,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union, cast
 
-# Third-party
-import trafilatura
-from readability import Document as ReadabilityDocument
-
 # Local
 from ..base.base_parser import BaseParser
 from ..exceptions import FileReadError, NetworkError, ParsingError
@@ -27,6 +23,7 @@ from ..models import Document, ImageReference, Metadata, ProcessingInfo
 from ..processors.chapter_detector import detect_chapters
 from ..processors.markdown_converter import html_to_markdown
 from ..processors.metadata_extractor import extract_html_metadata
+from .html.content_extractor import extract_main_content
 from .html.content_fetcher import ContentFetcher
 from .html.image_extractor import extract_images
 
@@ -104,29 +101,11 @@ class HTMLParser(BaseParser):
             html_content = self.content_fetcher.read_file(file_path_obj)
             source_identifier = str(file_path_obj.absolute())
 
-        # Extract main content with Trafilatura
-        extracted_html = self._extract_content_trafilatura(html_content)
-
-        # Fallback to Readability if Trafilatura fails or returns too little
-        if not extracted_html or len(extracted_html.strip()) < 100:
-            if extracted_html and len(extracted_html.strip()) > 0:
-                warnings.append(
-                    "Trafilatura extraction returned minimal content, "
-                    "using Readability fallback"
-                )
-            else:
-                warnings.append(
-                    "Trafilatura extraction failed, using Readability fallback"
-                )
-
-            extracted_html = self._extract_content_readability(html_content)
-
-            # If both fail, raise error
-            if not extracted_html or len(extracted_html.strip()) < 50:
-                raise ParsingError(
-                    "Both Trafilatura and Readability failed to extract content",
-                    parser="HTMLParser",
-                )
+        # Extract main content (Trafilatura with Readability fallback)
+        extracted_html, extraction_warnings = extract_main_content(
+            html_content, self.options
+        )
+        warnings.extend(extraction_warnings)
 
         # Build and return Document
         document = self._build_document(
@@ -158,50 +137,6 @@ class HTMLParser(BaseParser):
         # Check file extension
         path_obj = Path(file_path_str)
         return path_obj.suffix.lower() in [".html", ".htm"]
-
-    def _extract_content_trafilatura(self, html: str) -> Optional[str]:
-        """
-        Extract main content using Trafilatura.
-
-        Args:
-            html: HTML string to extract content from.
-
-        Returns:
-            Extracted HTML content or None if extraction fails.
-        """
-        try:
-            extracted = trafilatura.extract(
-                html,
-                include_comments=False,
-                include_tables=True,
-                include_images=False,
-                output_format="html",
-            )
-            return cast(Optional[str], extracted)
-        except Exception:
-            # Trafilatura can fail on malformed HTML
-            return None
-
-    def _extract_content_readability(self, html: str) -> str:
-        """
-        Extract main content using Readability as fallback.
-
-        Args:
-            html: HTML string to extract content from.
-
-        Returns:
-            Extracted HTML content.
-
-        Raises:
-            ParsingError: If Readability extraction fails.
-        """
-        try:
-            doc = ReadabilityDocument(html)
-            return cast(str, doc.summary())
-        except Exception as e:
-            raise ParsingError(
-                f"Readability extraction failed: {str(e)}", parser="HTMLParser"
-            ) from e
 
     def _build_document(
         self,
