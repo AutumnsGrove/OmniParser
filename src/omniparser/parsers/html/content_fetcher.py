@@ -65,10 +65,10 @@ class ContentFetcher:
         Raises:
             NetworkError: If fetch fails or times out.
         """
-        self._apply_rate_limit()
+        self.apply_rate_limit()
         timeout = self.options.get("timeout", 10)
         verify_ssl = self.options.get("verify_ssl", True)
-        headers = self._build_headers()
+        headers = self.build_headers()
 
         try:
             response = requests.get(
@@ -103,7 +103,7 @@ class ContentFetcher:
         except Exception as e:
             raise FileReadError(f"Failed to read file: {file_path} - {str(e)}") from e
 
-    def _build_headers(self) -> Dict[str, str]:
+    def build_headers(self) -> Dict[str, str]:
         """
         Build HTTP headers for requests.
 
@@ -116,7 +116,7 @@ class ContentFetcher:
         )
         return {"User-Agent": user_agent}
 
-    def _apply_rate_limit(self) -> None:
+    def apply_rate_limit(self) -> None:
         """
         Apply rate limiting by enforcing minimum delay between requests.
 
@@ -129,8 +129,8 @@ class ContentFetcher:
 
         Example:
             >>> fetcher = ContentFetcher({"rate_limit_delay": 1.0})
-            >>> fetcher._apply_rate_limit()  # First call returns immediately
-            >>> fetcher._apply_rate_limit()  # Second call waits ~1 second
+            >>> fetcher.apply_rate_limit()  # First call returns immediately
+            >>> fetcher.apply_rate_limit()  # Second call waits ~1 second
         """
         rate_limit_delay = self.options.get("rate_limit_delay", 0.0)
 

@@ -109,8 +109,8 @@ class HTMLParser(BaseParser):
             source=source_identifier,
             warnings=warnings,
             options=self.options,
-            apply_rate_limit=self.content_fetcher._apply_rate_limit,
-            build_headers=self.content_fetcher._build_headers,
+            apply_rate_limit=self.content_fetcher.apply_rate_limit,
+            build_headers=self.content_fetcher.build_headers,
         )
 
         # Update processing time

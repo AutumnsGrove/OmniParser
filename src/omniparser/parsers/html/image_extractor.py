@@ -11,9 +11,6 @@ This module handles image extraction from HTML content, including:
 
 Functions:
     extract_images: Main entry point for image extraction
-    resolve_image_url: Resolve relative URLs to absolute URLs
-    download_image: Download single image from URL
-    get_image_format: Detect image format from file
 """
 
 # Standard library
@@ -21,16 +18,16 @@ import logging
 import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
-from urllib.parse import urljoin, urlparse
+from typing import Any, Callable, Dict, List, Optional
+from urllib.parse import urlparse
 
 # Third-party
-import requests
 from bs4 import BeautifulSoup
-from PIL import Image
 
 # Local
 from ...models import ImageReference
+from .image_downloader import download_image, get_image_format
+from .image_url_resolver import resolve_image_url
 
 logger = logging.getLogger(__name__)
 
@@ -222,146 +219,3 @@ def extract_images(
 
     logger.info(f"Successfully extracted {len(images)} images")
     return images
-
-
-def resolve_image_url(img_src: str, base_url: Optional[str]) -> str:
-    """
-    Resolve relative image URLs to absolute URLs.
-
-    Handles:
-    - Absolute URLs: return as-is
-    - Relative URLs with base_url: join with base_url
-    - Protocol-relative URLs (//example.com/img.jpg)
-    - Data URIs: return as-is (skip download)
-
-    Args:
-        img_src: Image src attribute value.
-        base_url: Base URL from parsed page (None for local files).
-
-    Returns:
-        Resolved absolute URL or original src.
-
-    Example:
-        >>> url = resolve_image_url("/images/photo.jpg", "https://example.com/page")
-        >>> print(url)
-        https://example.com/images/photo.jpg
-    """
-    # Data URIs - return as-is
-    if img_src.startswith("data:"):
-        return img_src
-
-    # Absolute URLs - return as-is
-    if img_src.startswith("http://") or img_src.startswith("https://"):
-        return img_src
-
-    # Protocol-relative URLs
-    if img_src.startswith("//"):
-        # Use https by default
-        return f"https:{img_src}"
-
-    # Relative URLs - need base_url
-    if base_url:
-        return urljoin(base_url, img_src)
-
-    # No base_url - return as-is (will fail download but logged)
-    return img_src
-
-
-def download_image(
-    image_url: str,
-    output_path: Path,
-    options: Optional[Dict[str, Any]] = None,
-    apply_rate_limit: Optional[Callable[[], None]] = None,
-    build_headers: Optional[Callable[[], Dict[str, str]]] = None,
-) -> Optional[Tuple[int, int]]:
-    """
-    Download image from URL and save to output path.
-
-    Features:
-    - Use requests to download image
-    - Timeout: use same timeout as HTML fetching
-    - Use Pillow to get image dimensions
-    - Handle download errors gracefully (log warning, return None)
-    - Return image dimensions (width, height)
-
-    Args:
-        image_url: URL to download image from.
-        output_path: Path to save downloaded image.
-        options: Parser options dict containing timeout and verify_ssl settings
-        apply_rate_limit: Callback function to apply rate limiting before request
-        build_headers: Callback function to build HTTP headers
-
-    Returns:
-        Tuple of (width, height) if successful, None if failed.
-
-    Example:
-        >>> dims = download_image("https://example.com/image.jpg", Path("/tmp/img.jpg"))
-        >>> if dims:
-        ...     print(f"Image dimensions: {dims[0]}x{dims[1]}")
-    """
-    options = options or {}
-
-    # Apply rate limiting if callback provided
-    if apply_rate_limit:
-        apply_rate_limit()
-
-    timeout = options.get("timeout", 10)
-    verify_ssl = options.get("verify_ssl", True)
-    headers = build_headers() if build_headers else {}
-
-    try:
-        # Download image
-        response = requests.get(
-            image_url, timeout=timeout, headers=headers, stream=True, verify=verify_ssl
-        )
-        response.raise_for_status()
-
-        # Save to file
-        with open(output_path, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-
-        # Get dimensions using Pillow
-        try:
-            with Image.open(output_path) as img:
-                width, height = img.size
-                return (width, height)
-        except Exception as e:
-            logger.warning(f"Could not read image dimensions: {e}")
-            # Image was downloaded but dimensions unknown
-            return None
-
-    except requests.exceptions.Timeout:
-        logger.warning(f"Download timeout for image: {image_url}")
-        return None
-    except requests.exceptions.RequestException as e:
-        logger.warning(f"Failed to download image {image_url}: {e}")
-        return None
-    except Exception as e:
-        logger.warning(f"Error processing image {image_url}: {e}")
-        return None
-
-
-def get_image_format(file_path: Path) -> str:
-    """
-    Detect image format from file.
-
-    Uses Pillow to detect format (JPEG, PNG, GIF, WebP, etc.)
-
-    Args:
-        file_path: Path to image file.
-
-    Returns:
-        Image format string (lowercase, e.g., "jpeg", "png").
-
-    Example:
-        >>> format = get_image_format(Path("/tmp/image.jpg"))
-        >>> print(format)
-        jpeg
-    """
-    try:
-        with Image.open(file_path) as img:
-            return img.format.lower() if img.format else "unknown"
-    except Exception as e:
-        logger.warning(f"Could not detect image format for {file_path}: {e}")
-        return "unknown"
