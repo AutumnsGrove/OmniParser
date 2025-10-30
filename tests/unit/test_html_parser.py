@@ -196,7 +196,7 @@ class TestHTMLParserReadLocalFile:
             tmp_path = Path(tmp.name)
 
         try:
-            content = html_parser._read_local_file(tmp_path)
+            content = html_parser.content_fetcher.read_file(tmp_path)
             assert isinstance(content, str)
             assert "<html>" in content
             assert "<h1>Test</h1>" in content
@@ -206,7 +206,7 @@ class TestHTMLParserReadLocalFile:
     def test_read_local_file_not_found(self, html_parser: HTMLParser) -> None:
         """Test FileReadError raised for missing file."""
         with pytest.raises(FileReadError, match="File not found"):
-            html_parser._read_local_file(Path("/nonexistent/path/file.html"))
+            html_parser.content_fetcher.read_file(Path("/nonexistent/path/file.html"))
 
     def test_read_local_file_utf8_encoding(self, html_parser: HTMLParser) -> None:
         """Test reading file with UTF-8 characters."""
@@ -217,7 +217,7 @@ class TestHTMLParserReadLocalFile:
             tmp_path = Path(tmp.name)
 
         try:
-            content = html_parser._read_local_file(tmp_path)
+            content = html_parser.content_fetcher.read_file(tmp_path)
             assert "Café" in content
             assert "résumé" in content
             assert "naïve" in content
@@ -228,7 +228,7 @@ class TestHTMLParserReadLocalFile:
 class TestHTMLParserFetchURL:
     """Test URL fetching with mocked requests."""
 
-    @patch("omniparser.parsers.html_parser.requests.get")
+    @patch("omniparser.parsers.html.content_fetcher.requests.get")
     def test_fetch_url_success(
         self, mock_get: Mock, html_parser: HTMLParser, simple_html: str
     ) -> None:
@@ -237,7 +237,7 @@ class TestHTMLParserFetchURL:
         mock_response.text = simple_html
         mock_get.return_value = mock_response
 
-        content = html_parser._fetch_url("http://example.com")
+        content = html_parser.content_fetcher.fetch_url("http://example.com")
 
         assert content == simple_html
         mock_get.assert_called_once_with(
@@ -248,7 +248,7 @@ class TestHTMLParserFetchURL:
             },
         )
 
-    @patch("omniparser.parsers.html_parser.requests.get")
+    @patch("omniparser.parsers.html.content_fetcher.requests.get")
     def test_fetch_url_custom_timeout(self, mock_get: Mock) -> None:
         """Test URL fetch with custom timeout option."""
         parser = HTMLParser({"timeout": 30})
@@ -256,7 +256,7 @@ class TestHTMLParserFetchURL:
         mock_response.text = "<html></html>"
         mock_get.return_value = mock_response
 
-        parser._fetch_url("http://example.com")
+        parser.content_fetcher.fetch_url("http://example.com")
 
         mock_get.assert_called_once_with(
             "http://example.com",
@@ -266,7 +266,7 @@ class TestHTMLParserFetchURL:
             },
         )
 
-    @patch("omniparser.parsers.html_parser.requests.get")
+    @patch("omniparser.parsers.html.content_fetcher.requests.get")
     def test_fetch_url_timeout_error(
         self, mock_get: Mock, html_parser: HTMLParser
     ) -> None:
@@ -274,9 +274,9 @@ class TestHTMLParserFetchURL:
         mock_get.side_effect = requests.Timeout("Connection timeout")
 
         with pytest.raises(NetworkError, match="Request timeout"):
-            html_parser._fetch_url("http://example.com")
+            html_parser.content_fetcher.fetch_url("http://example.com")
 
-    @patch("omniparser.parsers.html_parser.requests.get")
+    @patch("omniparser.parsers.html.content_fetcher.requests.get")
     def test_fetch_url_http_error(
         self, mock_get: Mock, html_parser: HTMLParser
     ) -> None:
@@ -284,9 +284,9 @@ class TestHTMLParserFetchURL:
         mock_get.side_effect = requests.HTTPError("404 Not Found")
 
         with pytest.raises(NetworkError, match="Failed to fetch URL"):
-            html_parser._fetch_url("http://example.com/notfound")
+            html_parser.content_fetcher.fetch_url("http://example.com/notfound")
 
-    @patch("omniparser.parsers.html_parser.requests.get")
+    @patch("omniparser.parsers.html.content_fetcher.requests.get")
     def test_fetch_url_connection_error(
         self, mock_get: Mock, html_parser: HTMLParser
     ) -> None:
@@ -294,9 +294,9 @@ class TestHTMLParserFetchURL:
         mock_get.side_effect = requests.ConnectionError("Connection refused")
 
         with pytest.raises(NetworkError, match="Failed to fetch URL"):
-            html_parser._fetch_url("http://example.com")
+            html_parser.content_fetcher.fetch_url("http://example.com")
 
-    @patch("omniparser.parsers.html_parser.requests.get")
+    @patch("omniparser.parsers.html.content_fetcher.requests.get")
     def test_fetch_url_raise_for_status(
         self, mock_get: Mock, html_parser: HTMLParser
     ) -> None:
@@ -305,11 +305,11 @@ class TestHTMLParserFetchURL:
         mock_response.text = "<html></html>"
         mock_get.return_value = mock_response
 
-        html_parser._fetch_url("http://example.com")
+        html_parser.content_fetcher.fetch_url("http://example.com")
 
         mock_response.raise_for_status.assert_called_once()
 
-    @patch("omniparser.parsers.html_parser.requests.get")
+    @patch("omniparser.parsers.html.content_fetcher.requests.get")
     def test_fetch_url_custom_user_agent(self, mock_get: Mock) -> None:
         """Test URL fetch with custom user-agent option."""
         parser = HTMLParser({"user_agent": "CustomBot/1.0"})
@@ -317,7 +317,7 @@ class TestHTMLParserFetchURL:
         mock_response.text = "<html></html>"
         mock_get.return_value = mock_response
 
-        parser._fetch_url("http://example.com")
+        parser.content_fetcher.fetch_url("http://example.com")
 
         mock_get.assert_called_once_with(
             "http://example.com",
@@ -339,9 +339,9 @@ class TestHTMLParserRateLimiting:
 
             with patch("time.sleep") as mock_sleep:
                 # Make 3 rapid requests
-                html_parser._apply_rate_limit()
-                html_parser._apply_rate_limit()
-                html_parser._apply_rate_limit()
+                html_parser.content_fetcher._apply_rate_limit()
+                html_parser.content_fetcher._apply_rate_limit()
+                html_parser.content_fetcher._apply_rate_limit()
 
                 # Sleep should never be called when rate limiting is disabled
                 mock_sleep.assert_not_called()
@@ -358,11 +358,11 @@ class TestHTMLParserRateLimiting:
 
             with patch("time.sleep") as mock_sleep:
                 # First request - no wait (elapsed > delay since _last_request_time starts at 0.0)
-                parser._apply_rate_limit()
+                parser.content_fetcher._apply_rate_limit()
                 assert mock_sleep.call_count == 0
 
                 # Second request - should wait 0.3s (0.5 - 0.2 elapsed)
-                parser._apply_rate_limit()
+                parser.content_fetcher._apply_rate_limit()
                 mock_sleep.assert_called_once()
                 # Should sleep for approximately 0.3 seconds (0.5 delay - 0.2 elapsed)
                 sleep_duration = mock_sleep.call_args[0][0]
@@ -380,41 +380,44 @@ class TestHTMLParserRateLimiting:
 
             with patch("time.sleep") as mock_sleep:
                 # First request
-                parser._apply_rate_limit()
+                parser.content_fetcher._apply_rate_limit()
 
                 # Second request - no wait needed (1.0s elapsed > 0.5s delay)
-                parser._apply_rate_limit()
+                parser.content_fetcher._apply_rate_limit()
                 mock_sleep.assert_not_called()
 
     def test_rate_limiting_thread_safe(self) -> None:
         """Test that rate limiting is thread-safe using locks."""
         parser = HTMLParser({"rate_limit_delay": 0.1})
 
-        # Verify the lock exists
-        assert hasattr(parser, "_rate_limit_lock")
-        assert isinstance(parser._rate_limit_lock, type(parser._rate_limit_lock))
+        # Verify the lock exists on content_fetcher
+        assert hasattr(parser.content_fetcher, "_rate_limit_lock")
+        assert isinstance(
+            parser.content_fetcher._rate_limit_lock,
+            type(parser.content_fetcher._rate_limit_lock),
+        )
 
         with patch("time.time") as mock_time:
             mock_time.return_value = 0.0
 
             with patch("time.sleep"):
                 # Verify lock is used by checking we can acquire it before the call
-                with parser._rate_limit_lock:
+                with parser.content_fetcher._rate_limit_lock:
                     # This would deadlock if _apply_rate_limit tries to acquire the lock
                     # since we're in a different thread-like context
                     pass
 
                 # Normal call should work
-                parser._apply_rate_limit()
+                parser.content_fetcher._apply_rate_limit()
 
     def test_rate_limiting_negative_delay_disabled(self) -> None:
         """Test that negative rate_limit_delay disables rate limiting."""
         parser = HTMLParser({"rate_limit_delay": -1.0})
 
         with patch("time.sleep") as mock_sleep:
-            parser._apply_rate_limit()
-            parser._apply_rate_limit()
-            parser._apply_rate_limit()
+            parser.content_fetcher._apply_rate_limit()
+            parser.content_fetcher._apply_rate_limit()
+            parser.content_fetcher._apply_rate_limit()
 
             # No sleep calls should occur with negative delay
             mock_sleep.assert_not_called()
@@ -675,7 +678,7 @@ class TestHTMLParserParse:
         finally:
             tmp_path.unlink()
 
-    @patch("omniparser.parsers.html_parser.HTMLParser._fetch_url")
+    @patch("omniparser.parsers.html.content_fetcher.ContentFetcher.fetch_url")
     def test_parse_url(
         self, mock_fetch: Mock, html_parser: HTMLParser, simple_html: str
     ) -> None:
@@ -691,7 +694,7 @@ class TestHTMLParserParse:
         assert doc.metadata.custom_fields["url"] == "https://example.com/article"
         mock_fetch.assert_called_once_with("https://example.com/article")
 
-    @patch("omniparser.parsers.html_parser.HTMLParser._fetch_url")
+    @patch("omniparser.parsers.html.content_fetcher.ContentFetcher.fetch_url")
     def test_parse_url_stores_source(
         self, mock_fetch: Mock, html_parser: HTMLParser, simple_html: str
     ) -> None:
@@ -782,7 +785,7 @@ class TestHTMLParserErrorHandling:
         finally:
             tmp_path.unlink()
 
-    @patch("omniparser.parsers.html_parser.HTMLParser._fetch_url")
+    @patch("omniparser.parsers.html.content_fetcher.ContentFetcher.fetch_url")
     def test_parse_network_error_propagates(
         self, mock_fetch: Mock, html_parser: HTMLParser
     ) -> None:
@@ -1058,8 +1061,8 @@ class TestHTMLParserImageExtraction:
                     html,
                     base_url="http://example.com",
                     options=html_parser.options,
-                    apply_rate_limit=html_parser._apply_rate_limit,
-                    build_headers=html_parser._build_headers,
+                    apply_rate_limit=html_parser.content_fetcher._apply_rate_limit,
+                    build_headers=html_parser.content_fetcher._build_headers,
                 )
 
                 # Should extract 3 images (skip data URI)
@@ -1145,8 +1148,8 @@ class TestHTMLParserImageExtraction:
                         "http://example.com/image.jpg",
                         output_path,
                         options=html_parser.options,
-                        apply_rate_limit=html_parser._apply_rate_limit,
-                        build_headers=html_parser._build_headers,
+                        apply_rate_limit=html_parser.content_fetcher._apply_rate_limit,
+                        build_headers=html_parser.content_fetcher._build_headers,
                     )
 
                     # Verify dimensions returned
@@ -1180,8 +1183,8 @@ class TestHTMLParserImageExtraction:
                     "http://slow.example.com/image.jpg",
                     output_path,
                     options=html_parser.options,
-                    apply_rate_limit=html_parser._apply_rate_limit,
-                    build_headers=html_parser._build_headers,
+                    apply_rate_limit=html_parser.content_fetcher._apply_rate_limit,
+                    build_headers=html_parser.content_fetcher._build_headers,
                 )
 
                 # Should return None on timeout (graceful failure)
@@ -1205,8 +1208,8 @@ class TestHTMLParserImageExtraction:
                     "http://example.com/missing.jpg",
                     output_path,
                     options=html_parser.options,
-                    apply_rate_limit=html_parser._apply_rate_limit,
-                    build_headers=html_parser._build_headers,
+                    apply_rate_limit=html_parser.content_fetcher._apply_rate_limit,
+                    build_headers=html_parser.content_fetcher._build_headers,
                 )
 
                 # Should return None on HTTP error (graceful failure)
@@ -1461,8 +1464,8 @@ class TestHTMLParserParallelImageDownload:
                     html,
                     base_url="http://example.com",
                     options=html_parser.options,
-                    apply_rate_limit=html_parser._apply_rate_limit,
-                    build_headers=html_parser._build_headers,
+                    apply_rate_limit=html_parser.content_fetcher._apply_rate_limit,
+                    build_headers=html_parser.content_fetcher._build_headers,
                 )
 
                 # Verify images are returned with sequential IDs
@@ -1522,8 +1525,8 @@ class TestHTMLParserParallelImageDownload:
                     html,
                     base_url="http://example.com",
                     options=html_parser.options,
-                    apply_rate_limit=html_parser._apply_rate_limit,
-                    build_headers=html_parser._build_headers,
+                    apply_rate_limit=html_parser.content_fetcher._apply_rate_limit,
+                    build_headers=html_parser.content_fetcher._build_headers,
                 )
 
                 # Should successfully download 2 images (skipping the failed one)
@@ -1571,8 +1574,8 @@ class TestHTMLParserParallelImageDownload:
                     html,
                     base_url="http://example.com",
                     options=html_parser.options,
-                    apply_rate_limit=html_parser._apply_rate_limit,
-                    build_headers=html_parser._build_headers,
+                    apply_rate_limit=html_parser.content_fetcher._apply_rate_limit,
+                    build_headers=html_parser.content_fetcher._build_headers,
                 )
 
                 # Should successfully download 2 fast images, skip timeout

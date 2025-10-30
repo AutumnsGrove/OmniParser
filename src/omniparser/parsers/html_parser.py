@@ -10,7 +10,6 @@ Classes:
 
 # Standard library
 import logging
-import threading
 import time
 import uuid
 from datetime import datetime
@@ -18,7 +17,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union, cast
 
 # Third-party
-import requests
 import trafilatura
 from readability import Document as ReadabilityDocument
 
@@ -29,6 +27,7 @@ from ..models import Document, ImageReference, Metadata, ProcessingInfo
 from ..processors.chapter_detector import detect_chapters
 from ..processors.markdown_converter import html_to_markdown
 from ..processors.metadata_extractor import extract_html_metadata
+from .html.content_fetcher import ContentFetcher
 from .html.image_extractor import extract_images
 
 logger = logging.getLogger(__name__)
@@ -70,8 +69,7 @@ class HTMLParser(BaseParser):
                 - max_image_workers: Max concurrent image downloads (default: 5)
         """
         super().__init__(options)
-        self._last_request_time: float = 0.0
-        self._rate_limit_lock = threading.Lock()
+        self.content_fetcher = ContentFetcher(self.options)
 
     def parse(self, file_path: Union[Path, str]) -> Document:
         """
@@ -99,11 +97,11 @@ class HTMLParser(BaseParser):
 
         # Fetch HTML content
         if is_url:
-            html_content = self._fetch_url(file_path_str)
+            html_content = self.content_fetcher.fetch_url(file_path_str)
             source_identifier = file_path_str
         else:
             file_path_obj = Path(file_path) if isinstance(file_path, str) else file_path
-            html_content = self._read_local_file(file_path_obj)
+            html_content = self.content_fetcher.read_file(file_path_obj)
             source_identifier = str(file_path_obj.absolute())
 
         # Extract main content with Trafilatura
@@ -160,98 +158,6 @@ class HTMLParser(BaseParser):
         # Check file extension
         path_obj = Path(file_path_str)
         return path_obj.suffix.lower() in [".html", ".htm"]
-
-    def _build_headers(self) -> Dict[str, str]:
-        """
-        Build HTTP headers for requests.
-
-        Returns:
-            Dictionary of HTTP headers including User-Agent.
-        """
-        user_agent = self.options.get(
-            "user_agent",
-            "OmniParser/0.2.1 (+https://github.com/AutumnsGrove/omniparser)",
-        )
-        return {"User-Agent": user_agent}
-
-    def _apply_rate_limit(self) -> None:
-        """
-        Apply rate limiting by enforcing minimum delay between requests.
-
-        Thread-safe implementation using a lock to coordinate across parallel downloads.
-        Respects the 'rate_limit_delay' option (default: 0.0 = no rate limiting).
-
-        The method uses a lock to ensure thread safety when multiple images are being
-        downloaded in parallel. It calculates the elapsed time since the last request
-        and sleeps if necessary to enforce the minimum delay.
-
-        Example:
-            >>> parser = HTMLParser(rate_limit_delay=1.0)
-            >>> parser._apply_rate_limit()  # First call returns immediately
-            >>> parser._apply_rate_limit()  # Second call waits ~1 second
-        """
-        rate_limit_delay = self.options.get("rate_limit_delay", 0.0)
-
-        if rate_limit_delay <= 0:
-            return
-
-        with self._rate_limit_lock:
-            current_time = time.time()
-            elapsed = current_time - self._last_request_time
-
-            if elapsed < rate_limit_delay:
-                sleep_time = rate_limit_delay - elapsed
-                time.sleep(sleep_time)
-
-            self._last_request_time = time.time()
-
-    def _fetch_url(self, url: str) -> str:
-        """
-        Fetch HTML content from URL.
-
-        Args:
-            url: URL to fetch.
-
-        Returns:
-            HTML content as string.
-
-        Raises:
-            NetworkError: If fetch fails or times out.
-        """
-        self._apply_rate_limit()
-        timeout = self.options.get("timeout", 10)
-        headers = self._build_headers()
-
-        try:
-            response = requests.get(url, timeout=timeout, headers=headers)
-            response.raise_for_status()
-            return cast(str, response.text)
-        except requests.exceptions.Timeout as e:
-            raise NetworkError(f"Request timeout after {timeout} seconds: {url}") from e
-        except requests.exceptions.RequestException as e:
-            raise NetworkError(f"Failed to fetch URL: {url} - {str(e)}") from e
-
-    def _read_local_file(self, file_path: Path) -> str:
-        """
-        Read HTML content from local file.
-
-        Args:
-            file_path: Path to local HTML file.
-
-        Returns:
-            HTML content as string.
-
-        Raises:
-            FileReadError: If file doesn't exist or cannot be read.
-        """
-        try:
-            return file_path.read_text(encoding="utf-8")
-        except FileNotFoundError as e:
-            raise FileReadError(f"File not found: {file_path}") from e
-        except PermissionError as e:
-            raise FileReadError(f"Permission denied: {file_path}") from e
-        except Exception as e:
-            raise FileReadError(f"Failed to read file: {file_path} - {str(e)}") from e
 
     def _extract_content_trafilatura(self, html: str) -> Optional[str]:
         """
@@ -334,8 +240,8 @@ class HTMLParser(BaseParser):
                     original_html,
                     base_url=base_url,
                     options=self.options,
-                    apply_rate_limit=self._apply_rate_limit,
-                    build_headers=self._build_headers,
+                    apply_rate_limit=self.content_fetcher._apply_rate_limit,
+                    build_headers=self.content_fetcher._build_headers,
                 )
                 if images:
                     logger.info(f"Extracted {len(images)} images from HTML")
