@@ -28,6 +28,7 @@ from ..base.base_parser import BaseParser
 from ..exceptions import FileReadError, ParsingError, ValidationError
 from ..models import Chapter, Document, ImageReference, Metadata, ProcessingInfo
 from ..processors.metadata_builder import MetadataBuilder
+from .epub.loading import load_epub
 from .epub.toc import TocEntry
 from .epub.utils import count_words, estimate_reading_time
 from .epub.validator import supports_epub_format, validate_epub_file
@@ -239,14 +240,7 @@ class EPUBParser(BaseParser):
         Raises:
             ParsingError: If EPUB cannot be loaded.
         """
-        try:
-            book = epub.read_epub(str(file_path))
-            return book
-        except Exception as e:
-            logger.error(f"Failed to load EPUB: {e}")
-            raise ParsingError(
-                f"Failed to load EPUB file: {e}", parser="EPUBParser", original_error=e
-            )
+        return load_epub(file_path, self._warnings)
 
     def _extract_metadata(self, book: epub.EpubBook, file_path: Path) -> Metadata:
         """Extract metadata from EPUB OPF file.
