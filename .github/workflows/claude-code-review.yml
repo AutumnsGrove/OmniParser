@@ -19,20 +19,16 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Setup Node.js with caching
-        uses: actions/setup-node@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          node-version: '20'
-          cache: 'npm'
+          python-version: '3.11'
 
-      - name: Cache node_modules
-        id: cache-node-modules
-        uses: actions/cache@v4
+      - name: Install UV
+        uses: astral-sh/setup-uv@v3
         with:
-          path: node_modules
-          key: ${{ runner.os }}-nodemodules-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-nodemodules-
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
       - name: Run Claude Code Review
         id: claude-review
