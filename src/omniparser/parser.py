@@ -15,7 +15,7 @@ from .parsers.epub_parser import EPUBParser
 from .parsers.html_parser import HTMLParser
 from .parsers.pdf import parse_pdf
 from .parsers.markdown_parser import MarkdownParser
-from .parsers.docx_parser import DOCXParser
+from .parsers.docx import parse_docx
 from .parsers.text_parser import TextParser
 
 logger = logging.getLogger(__name__)
@@ -113,8 +113,29 @@ def parse_document(
 
     # DOCX format
     elif file_extension in [".docx"]:
-        docx_parser = DOCXParser(options)
-        return docx_parser.parse(file_path)
+        # Extract options for parse_docx function
+        extract_images_flag = True
+        image_output_dir = None
+        preserve_formatting = True
+        extract_hyperlinks = True
+        extract_lists = True
+
+        if options:
+            extract_images_flag = options.get("extract_images", True)
+            if "image_output_dir" in options:
+                image_output_dir = Path(options["image_output_dir"])
+            preserve_formatting = options.get("preserve_formatting", True)
+            extract_hyperlinks = options.get("extract_hyperlinks", True)
+            extract_lists = options.get("extract_lists", True)
+
+        return parse_docx(
+            file_path,
+            extract_images_flag=extract_images_flag,
+            image_output_dir=image_output_dir,
+            preserve_formatting=preserve_formatting,
+            extract_hyperlinks=extract_hyperlinks,
+            extract_lists=extract_lists,
+        )
 
     # HTML format
     elif file_extension in [".html", ".htm"]:

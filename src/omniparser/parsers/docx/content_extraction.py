@@ -20,9 +20,103 @@ from docx.oxml.text.paragraph import CT_P
 from docx.table import Table
 from docx.text.paragraph import Paragraph
 
-from .paragraphs import convert_paragraph
+from .paragraphs import convert_paragraph, convert_paragraph_with_hyperlinks
 from .tables import convert_table
 from .lists import is_list_item, format_list_item
+
+
+def extract_content_with_features(
+    docx: Any,
+    preserve_formatting: bool = True,
+    extract_hyperlinks: bool = True,
+    extract_lists: bool = True,
+    heading_styles: Optional[List[str]] = None,
+    extract_tables: bool = True,
+) -> str:
+    """Extract all content from DOCX document with full feature support.
+
+    This is the primary content extraction function that integrates all features:
+    - Paragraphs with formatting (bold, italic)
+    - Hyperlinks as markdown [text](url)
+    - Lists (ordered and unordered) with proper nesting
+    - Tables as markdown tables
+    - Headings as markdown headings (# ## ###)
+
+    This function supersedes extract_content() by adding hyperlink and list
+    support. It should be used by the main parser orchestrator.
+
+    Args:
+        docx: python-docx Document object
+        preserve_formatting: Whether to preserve bold/italic formatting.
+            Default: True
+        extract_hyperlinks: Whether to extract and format hyperlinks.
+            Default: True
+        extract_lists: Whether to detect and format list items.
+            Default: True
+        heading_styles: Optional list of heading style names to recognize.
+            If None, uses default heading styles (Heading 1-6).
+        extract_tables: Whether to extract and convert tables to markdown.
+            Default: True
+
+    Returns:
+        Full document content as markdown string with all features
+
+    Example:
+        >>> from docx import Document
+        >>> doc = Document("report.docx")
+        >>> markdown = extract_content_with_features(
+        ...     doc,
+        ...     preserve_formatting=True,
+        ...     extract_hyperlinks=True,
+        ...     extract_lists=True
+        ... )
+        >>> print(markdown)
+    """
+    markdown_parts: List[str] = []
+
+    # Iterate through all document elements (paragraphs and tables)
+    for element in docx.element.body:
+        # Check if it's a paragraph
+        if isinstance(element, CT_P):
+            para = Paragraph(element, docx)
+
+            # Check if it's a list item (if list extraction enabled)
+            if extract_lists and is_list_item(para):
+                text = para.text.strip()
+                if text:
+                    markdown_text = format_list_item(para, text)
+                    markdown_parts.append(markdown_text)
+            else:
+                # Regular paragraph processing (with optional hyperlinks)
+                if extract_hyperlinks:
+                    markdown_text = convert_paragraph_with_hyperlinks(
+                        para,
+                        docx,
+                        heading_styles=heading_styles,
+                        preserve_formatting=preserve_formatting,
+                        extract_hyperlinks=True,
+                    )
+                else:
+                    markdown_text = convert_paragraph(
+                        para,
+                        heading_styles=heading_styles,
+                        preserve_formatting=preserve_formatting,
+                    )
+
+                if markdown_text.strip():  # Skip empty paragraphs
+                    markdown_parts.append(markdown_text)
+
+        # Check if it's a table
+        elif isinstance(element, CT_Tbl):
+            if extract_tables:
+                table = Table(element, docx)
+                markdown_table = convert_table(table)
+                if markdown_table.strip():
+                    markdown_parts.append(markdown_table)
+                    markdown_parts.append("")  # Add blank line after table
+
+    # Join all parts with double newlines
+    return "\n\n".join(markdown_parts)
 
 
 def extract_content(
