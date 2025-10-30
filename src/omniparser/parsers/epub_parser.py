@@ -29,6 +29,7 @@ from ..exceptions import FileReadError, ParsingError, ValidationError
 from ..models import Chapter, Document, ImageReference, Metadata, ProcessingInfo
 from ..processors.metadata_builder import MetadataBuilder
 from .epub.loading import load_epub
+from .epub.metadata import extract_epub_metadata
 from .epub.toc import TocEntry
 from .epub.utils import count_words, estimate_reading_time
 from .epub.validator import supports_epub_format, validate_epub_file
@@ -245,8 +246,8 @@ class EPUBParser(BaseParser):
     def _extract_metadata(self, book: epub.EpubBook, file_path: Path) -> Metadata:
         """Extract metadata from EPUB OPF file.
 
-        Extracts standard Dublin Core metadata fields from the EPUB package
-        document (OPF file).
+        Delegates to the modular metadata extraction function to extract
+        standard Dublin Core metadata fields from the EPUB package document (OPF file).
 
         Args:
             book: EpubBook object.
@@ -255,105 +256,7 @@ class EPUBParser(BaseParser):
         Returns:
             Metadata object with extracted fields.
         """
-
-        # Helper function to safely extract first metadata value
-        def get_first_metadata(namespace: str, name: str) -> Optional[str]:
-            """Get first metadata value from book."""
-            try:
-                metadata_list = book.get_metadata(namespace, name)
-                if metadata_list and len(metadata_list) > 0:
-                    # Metadata returns list of tuples: [(value, attributes_dict)]
-                    return metadata_list[0][0]
-            except Exception as e:
-                logger.debug(f"Failed to get metadata {namespace}:{name}: {e}")
-            return None
-
-        # Helper function to get all metadata values
-        def get_all_metadata(namespace: str, name: str) -> List[str]:
-            """Get all metadata values from book."""
-            try:
-                metadata_list = book.get_metadata(namespace, name)
-                if metadata_list:
-                    return [item[0] for item in metadata_list if item[0]]
-            except Exception as e:
-                logger.debug(f"Failed to get metadata list {namespace}:{name}: {e}")
-            return []
-
-        # Extract title
-        title = get_first_metadata("DC", "title")
-
-        # Extract authors (all contributors)
-        authors = get_all_metadata("DC", "creator")
-        # Primary author is first in list
-        author = authors[0] if authors else None
-
-        # Extract publisher
-        publisher = get_first_metadata("DC", "publisher")
-
-        # Extract and parse publication date
-        publication_date: Optional[datetime] = None
-        date_str = get_first_metadata("DC", "date")
-        if date_str:
-            # Try common date formats
-            date_formats = [
-                "%Y-%m-%d",  # 2023-01-15
-                "%Y-%m-%dT%H:%M:%S",  # 2023-01-15T10:30:00
-                "%Y-%m-%dT%H:%M:%SZ",  # 2023-01-15T10:30:00Z
-                "%Y-%m-%dT%H:%M:%S%z",  # 2024-07-09T05:00:00+00:00
-                "%Y",  # 2023
-                "%Y-%m",  # 2023-01
-            ]
-            for fmt in date_formats:
-                try:
-                    publication_date = datetime.strptime(date_str, fmt)
-                    break
-                except ValueError:
-                    continue
-            if publication_date is None:
-                logger.warning(f"Could not parse publication date: {date_str}")
-                self._warnings.append(f"Could not parse publication date: {date_str}")
-
-        # Extract language
-        language = get_first_metadata("DC", "language")
-
-        # Extract ISBN from identifiers
-        isbn: Optional[str] = None
-        identifiers = get_all_metadata("DC", "identifier")
-        for identifier in identifiers:
-            # Look for ISBN in identifier string
-            if identifier and "isbn" in identifier.lower():
-                # Extract just the ISBN number (remove "ISBN:" prefix if present)
-                isbn = (
-                    identifier.replace("urn:isbn:", "")
-                    .replace("ISBN:", "")
-                    .replace("isbn:", "")
-                    .strip()
-                )
-                break
-
-        # Extract description
-        description = get_first_metadata("DC", "description")
-
-        # Extract tags/subjects
-        tags = get_all_metadata("DC", "subject")
-
-        # Calculate file size
-        file_size = file_path.stat().st_size
-
-        return MetadataBuilder.build(
-            title=title,
-            author=author,
-            authors=authors,
-            publisher=publisher,
-            publication_date=publication_date,
-            language=language,
-            isbn=isbn,
-            description=description,
-            tags=tags,
-            original_format="epub",
-            file_size=file_size,
-            custom_fields={},
-        )
+        return extract_epub_metadata(book, file_path, self._warnings)
 
     def _extract_toc(self, book: epub.EpubBook) -> Optional[List[TocEntry]]:
         """Extract table of contents from EPUB.
