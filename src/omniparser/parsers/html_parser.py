@@ -11,21 +11,15 @@ Classes:
 # Standard library
 import logging
 import time
-import uuid
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, Optional, Union
 
 # Local
 from ..base.base_parser import BaseParser
-from ..exceptions import FileReadError, NetworkError, ParsingError
-from ..models import Document, ImageReference, Metadata, ProcessingInfo
-from ..processors.chapter_detector import detect_chapters
-from ..processors.markdown_converter import html_to_markdown
-from ..processors.metadata_extractor import extract_html_metadata
+from ..models import Document
 from .html.content_extractor import extract_main_content
 from .html.content_fetcher import ContentFetcher
-from .html.image_extractor import extract_images
+from .html.document_builder import build_html_document
 
 logger = logging.getLogger(__name__)
 
@@ -108,8 +102,14 @@ class HTMLParser(BaseParser):
         warnings.extend(extraction_warnings)
 
         # Build and return Document
-        document = self._build_document(
-            extracted_html, html_content, source_identifier, warnings
+        document = build_html_document(
+            content_html=extracted_html,
+            full_html=html_content,
+            source=source_identifier,
+            warnings=warnings,
+            options=self.options,
+            apply_rate_limit=self.content_fetcher._apply_rate_limit,
+            build_headers=self.content_fetcher._build_headers,
         )
 
         # Update processing time
@@ -137,88 +137,3 @@ class HTMLParser(BaseParser):
         # Check file extension
         path_obj = Path(file_path_str)
         return path_obj.suffix.lower() in [".html", ".htm"]
-
-    def _build_document(
-        self,
-        content_html: str,
-        original_html: str,
-        source_identifier: str,
-        warnings: list,
-    ) -> Document:
-        """
-        Build Document object from extracted HTML.
-
-        Args:
-            content_html: Extracted HTML content.
-            original_html: Original HTML (for metadata extraction).
-            source_identifier: File path or URL.
-            warnings: List of warnings from processing.
-
-        Returns:
-            Complete Document object.
-        """
-        # Convert HTML to Markdown
-        markdown_content = html_to_markdown(content_html)
-
-        # Extract metadata from original HTML (better meta tag access)
-        url = source_identifier if source_identifier.startswith("http") else None
-        metadata = extract_html_metadata(original_html, url=url)
-
-        # Extract images from ORIGINAL HTML (before processing strips them)
-        images: List[ImageReference] = []
-        if self.options.get("extract_images", True):
-            try:
-                base_url = (
-                    source_identifier if source_identifier.startswith("http") else None
-                )
-                images = extract_images(
-                    original_html,
-                    base_url=base_url,
-                    options=self.options,
-                    apply_rate_limit=self.content_fetcher._apply_rate_limit,
-                    build_headers=self.content_fetcher._build_headers,
-                )
-                if images:
-                    logger.info(f"Extracted {len(images)} images from HTML")
-            except Exception as e:
-                warning_msg = f"Image extraction failed: {str(e)}"
-                warnings.append(warning_msg)
-                logger.warning(warning_msg)
-
-        # Detect chapters if enabled
-        chapters = []
-        if self.options.get("detect_chapters", True):
-            min_level = self.options.get("min_chapter_level", 1)
-            max_level = self.options.get("max_chapter_level", 2)
-            chapters = detect_chapters(markdown_content, min_level, max_level)
-
-        # Calculate word count and reading time
-        word_count = len(markdown_content.split())
-        estimated_reading_time = max(
-            1, round(word_count / 225)
-        )  # 225 WPM, minimum 1 minute
-
-        # Create processing info
-        processing_info = ProcessingInfo(
-            parser_used="HTMLParser",
-            parser_version="0.1.0",
-            processing_time=0.0,  # Will be updated by caller
-            timestamp=datetime.now(),
-            warnings=warnings,
-            options_used=dict(self.options),
-        )
-
-        # Generate document ID
-        document_id = str(uuid.uuid4())
-
-        # Build and return Document
-        return Document(
-            document_id=document_id,
-            content=markdown_content,
-            chapters=chapters,
-            images=images,
-            metadata=metadata,
-            processing_info=processing_info,
-            word_count=word_count,
-            estimated_reading_time=estimated_reading_time,
-        )
