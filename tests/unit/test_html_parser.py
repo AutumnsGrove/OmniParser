@@ -250,6 +250,7 @@ class TestHTMLParserFetchURL:
             headers={
                 "User-Agent": "OmniParser/0.2.1 (+https://github.com/AutumnsGrove/omniparser)"
             },
+            verify=True,
         )
 
     @patch("omniparser.parsers.html.content_fetcher.requests.get")
@@ -268,6 +269,7 @@ class TestHTMLParserFetchURL:
             headers={
                 "User-Agent": "OmniParser/0.2.1 (+https://github.com/AutumnsGrove/omniparser)"
             },
+            verify=True,
         )
 
     @patch("omniparser.parsers.html.content_fetcher.requests.get")
@@ -327,6 +329,7 @@ class TestHTMLParserFetchURL:
             "http://example.com",
             timeout=10,
             headers={"User-Agent": "CustomBot/1.0"},
+            verify=True,
         )
 
 
@@ -1170,6 +1173,7 @@ class TestHTMLParserImageExtraction:
                             "User-Agent": "OmniParser/0.2.1 (+https://github.com/AutumnsGrove/omniparser)"
                         },
                         stream=True,
+                        verify=True,
                     )
 
     def test_download_image_timeout(self, html_parser: HTMLParser) -> None:

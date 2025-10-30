@@ -45,6 +45,7 @@ class ContentFetcher:
             options: Configuration dict including:
                 - rate_limit_delay: Minimum seconds between requests (default: 0.0)
                 - timeout: Request timeout in seconds (default: 10)
+                - verify_ssl: Enable SSL certificate verification (default: True)
                 - user_agent: Custom User-Agent string
         """
         self.options = options
@@ -66,10 +67,13 @@ class ContentFetcher:
         """
         self._apply_rate_limit()
         timeout = self.options.get("timeout", 10)
+        verify_ssl = self.options.get("verify_ssl", True)
         headers = self._build_headers()
 
         try:
-            response = requests.get(url, timeout=timeout, headers=headers)
+            response = requests.get(
+                url, timeout=timeout, headers=headers, verify=verify_ssl
+            )
             response.raise_for_status()
             return response.text
         except requests.exceptions.Timeout as e:

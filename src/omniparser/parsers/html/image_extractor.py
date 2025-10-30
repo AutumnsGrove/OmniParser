@@ -287,7 +287,7 @@ def download_image(
     Args:
         image_url: URL to download image from.
         output_path: Path to save downloaded image.
-        options: Parser options dict containing timeout setting
+        options: Parser options dict containing timeout and verify_ssl settings
         apply_rate_limit: Callback function to apply rate limiting before request
         build_headers: Callback function to build HTTP headers
 
@@ -306,12 +306,13 @@ def download_image(
         apply_rate_limit()
 
     timeout = options.get("timeout", 10)
+    verify_ssl = options.get("verify_ssl", True)
     headers = build_headers() if build_headers else {}
 
     try:
         # Download image
         response = requests.get(
-            image_url, timeout=timeout, headers=headers, stream=True
+            image_url, timeout=timeout, headers=headers, stream=True, verify=verify_ssl
         )
         response.raise_for_status()
 

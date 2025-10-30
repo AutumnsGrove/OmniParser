@@ -17,6 +17,12 @@ from readability import Document as ReadabilityDocument
 
 from ...exceptions import ParsingError
 
+# Content length thresholds for extraction validation
+MIN_CONTENT_LENGTH_TRAFILATURA = (
+    100  # Min chars for Trafilatura to be considered successful
+)
+MIN_CONTENT_LENGTH_TOTAL = 50  # Min chars for any extraction to be considered valid
+
 
 def extract_main_content(html: str, options: dict) -> Tuple[str, List[str]]:
     """
@@ -49,7 +55,10 @@ def extract_main_content(html: str, options: dict) -> Tuple[str, List[str]]:
     extracted_html = extract_with_trafilatura(html)
 
     # Fallback to Readability if needed
-    if not extracted_html or len(extracted_html.strip()) < 100:
+    if (
+        not extracted_html
+        or len(extracted_html.strip()) < MIN_CONTENT_LENGTH_TRAFILATURA
+    ):
         if extracted_html and len(extracted_html.strip()) > 0:
             warnings.append(
                 "Trafilatura extraction returned minimal content, "
@@ -61,7 +70,7 @@ def extract_main_content(html: str, options: dict) -> Tuple[str, List[str]]:
         extracted_html = extract_with_readability(html)
 
         # If both fail, raise error
-        if not extracted_html or len(extracted_html.strip()) < 50:
+        if not extracted_html or len(extracted_html.strip()) < MIN_CONTENT_LENGTH_TOTAL:
             raise ParsingError(
                 "Both Trafilatura and Readability failed to extract content",
                 parser="HTMLParser",
