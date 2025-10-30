@@ -164,14 +164,33 @@ def parse_docx(
     logger.debug(f"Word count: {word_count}, Reading time: {reading_time} min")
 
     # Step 7: Build and return Document
+    from datetime import datetime
+    from omniparser.models import ProcessingInfo
+    from omniparser import __version__
+
+    processing_info = ProcessingInfo(
+        parser_used="parse_docx",
+        parser_version=__version__,
+        processing_time=0.0,  # TODO: Track actual processing time
+        timestamp=datetime.now(),
+        warnings=warnings_list,
+        options_used={
+            "extract_images": extract_images_flag,
+            "preserve_formatting": preserve_formatting,
+            "extract_hyperlinks": extract_hyperlinks,
+            "extract_lists": extract_lists,
+        },
+    )
+
     document = Document(
-        metadata=metadata,
-        full_text=content,
+        document_id=f"docx_{file_path.stem}",
+        content=content,
         chapters=[],  # DOCX doesn't have chapter structure
         images=images,
+        metadata=metadata,
+        processing_info=processing_info,
         word_count=word_count,
-        reading_time_minutes=reading_time,
-        warnings=warnings_list,
+        estimated_reading_time=reading_time,
     )
 
     logger.info(
