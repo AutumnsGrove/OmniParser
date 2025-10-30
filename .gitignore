@@ -41,7 +41,6 @@ venv.bak/
 
 # UV
 .uv/
-uv.lock
 .python-version
 
 # PyCharm
