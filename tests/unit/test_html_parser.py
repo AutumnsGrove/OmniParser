@@ -121,7 +121,7 @@ def minimal_html() -> str:
     return """
     <html>
     <head><title>Minimal</title></head>
-    <body><p>Just some text.</p></body>
+    <body><p>Minimal HTML document with just a single paragraph.</p></body>
     </html>
     """
 
@@ -826,7 +826,7 @@ class TestHTMLParserProcessingInfo:
 
             assert doc.processing_info is not None
             assert doc.processing_info.processing_time >= 0
-            assert doc.processing_info.parser_used == "HTMLParser"
+            assert doc.processing_info.parser_used == "html"
             assert doc.processing_info.parser_version == "0.1.0"
             assert doc.processing_info.timestamp is not None
         finally:

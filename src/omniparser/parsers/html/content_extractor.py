@@ -79,7 +79,7 @@ def extract_main_content(html: str, options: dict) -> Tuple[str, List[str]]:
         # If both fail, raise error
         if not extracted_html or len(extracted_html.strip()) < MIN_CONTENT_LENGTH_TOTAL:
             raise ParsingError(
-                "Both Readability and Trafilatura failed to extract content",
+                "Both Trafilatura and Readability failed to extract content",
                 parser="HTMLParser",
             )
 
