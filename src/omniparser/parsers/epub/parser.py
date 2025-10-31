@@ -20,7 +20,12 @@ from typing import Any, Dict, List, Optional, Union
 from ebooklib import epub
 
 # Local
-from ...exceptions import FileReadError, ParsingError, ValidationError
+from ...exceptions import (
+    FileReadError,
+    ParsingError,
+    ValidationError,
+    UnsupportedFormatError,
+)
 from ...models import Chapter, Document, ImageReference, Metadata, ProcessingInfo
 from .chapters import extract_content_and_chapters
 from .images import extract_epub_images
@@ -184,8 +189,8 @@ def parse_epub(file_path: Union[Path, str], **options) -> Document:
 
         return document
 
-    except (FileReadError, ValidationError):
-        # Re-raise validation errors as-is
+    except (FileReadError, ValidationError, UnsupportedFormatError):
+        # Re-raise validation and format errors as-is
         raise
     except Exception as e:
         logger.error(f"EPUB parsing failed: {e}")

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Union
 
 # Local
-from ...exceptions import FileReadError, ValidationError
+from ...exceptions import FileReadError, ValidationError, UnsupportedFormatError
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ def validate_epub_file(file_path: Union[Path, str], warnings: list = None) -> No
 
     # Check extension
     if not supports_epub_format(file_path):
-        raise ValidationError(f"Not an EPUB file: {file_path}")
+        raise UnsupportedFormatError(f"Not an EPUB file: {file_path}")
 
     # Check file size
     file_size = file_path.stat().st_size

@@ -239,17 +239,20 @@ class TestEPUBParsingEdgeCases:
             parse_document(Path("nonexistent.epub"))
 
     def test_parse_invalid_file_type(self) -> None:
-        """Test error handling for wrong file type."""
-        # Create a temporary text file with .txt extension
+        """Test error handling for wrong file type (non-EPUB)."""
+        # Create a temporary file with unsupported extension for EPUB parser
         import tempfile
+        from omniparser.parsers.epub_parser import EPUBParser
 
         with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
             tmp.write(b"Not an EPUB file")
             tmp_path = Path(tmp.name)
 
         try:
+            # Test that EPUBParser rejects non-EPUB files
+            parser = EPUBParser()
             with pytest.raises(UnsupportedFormatError):
-                parse_document(tmp_path)
+                parser.parse(tmp_path)
         finally:
             if tmp_path.exists():
                 tmp_path.unlink()

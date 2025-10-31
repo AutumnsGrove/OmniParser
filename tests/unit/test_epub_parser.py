@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from omniparser.exceptions import FileReadError, ValidationError
+from omniparser.exceptions import FileReadError, ValidationError, UnsupportedFormatError
 from omniparser.parsers.epub_parser import EPUBParser
 from omniparser.parsers.epub.toc import TocEntry
 from omniparser.parsers.epub.utils import count_words, estimate_reading_time
@@ -106,7 +106,7 @@ class TestEPUBParserValidation:
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
             tmp_path = Path(tmp.name)
             try:
-                with pytest.raises(ValidationError, match="Not an EPUB file"):
+                with pytest.raises(UnsupportedFormatError, match="Not an EPUB file"):
                     parser._validate_epub(tmp_path)
             finally:
                 tmp_path.unlink()
