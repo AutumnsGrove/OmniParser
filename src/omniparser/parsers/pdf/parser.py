@@ -20,10 +20,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ...models import Chapter, Document, ImageReference, Metadata, ProcessingInfo
+from ...models import Chapter, Document, ImageReference, Metadata, ProcessingInfo, QRCodeReference
 from ...processors.text_cleaner import clean_text
+from ...processors.qr_content_merger import process_qr_codes, merge_qr_content_to_document
 from .heading_detection import process_pdf_headings
-from .images import extract_pdf_images
+from .images import extract_pdf_images, scan_pdf_for_qr_codes
 from .metadata import extract_pdf_metadata
 from .tables import extract_pdf_tables
 from .text_extraction import extract_text_content
@@ -63,6 +64,10 @@ def parse_pdf(
             - extract_images: Extract images (default: True if output_dir provided)
             - extract_tables: Extract tables (default: True)
             - clean_text: Apply text cleaning (default: True)
+            - detect_qr_codes: Scan for QR codes in PDF (default: False)
+            - qr_fetch_urls: Fetch content from QR code URLs (default: True)
+            - qr_timeout: Timeout for QR URL fetching in seconds (default: 15)
+            - qr_dpi: DPI for rendering pages for QR detection (default: 150)
 
     Returns:
         Document object with parsed content, metadata, and processing info.
@@ -90,6 +95,10 @@ def parse_pdf(
     extract_images_flag = options.get("extract_images", output_dir is not None)
     extract_tables_flag = options.get("extract_tables", True)
     clean_text_flag = options.get("clean_text", True)
+    detect_qr_codes_flag = options.get("detect_qr_codes", False)
+    qr_fetch_urls = options.get("qr_fetch_urls", True)
+    qr_timeout = options.get("qr_timeout", 15)
+    qr_dpi = options.get("qr_dpi", 150)
 
     # Step 1: Validate and load PDF
     logger.info(f"Loading PDF: {file_path}")
@@ -135,22 +144,39 @@ def parse_pdf(
                 markdown_content += "\n\n## Extracted Tables\n\n"
                 markdown_content += "\n\n".join(tables)
 
-        # Step 8: Calculate word count and reading time
+        # Step 8: Detect QR codes (if enabled)
+        qr_codes: List[QRCodeReference] = []
+        qr_warnings: List[str] = []
+        if detect_qr_codes_flag:
+            logger.info("Scanning for QR codes")
+            qr_codes, qr_warnings = scan_pdf_for_qr_codes(doc, dpi=qr_dpi)
+
+            if qr_codes:
+                logger.info(f"Found {len(qr_codes)} QR code(s), processing...")
+                # Fetch content from QR code URLs
+                qr_codes = process_qr_codes(
+                    qr_codes,
+                    fetch_urls=qr_fetch_urls,
+                    timeout=qr_timeout,
+                )
+
+        # Step 9: Calculate word count and reading time
         word_count = count_words(markdown_content)
         reading_time = estimate_reading_time(word_count)
 
-        # Step 9: Build ProcessingInfo
+        # Step 10: Build ProcessingInfo
         processing_time = time.time() - start_time
+        all_warnings = qr_warnings.copy()  # Include QR warnings
         processing_info = ProcessingInfo(
             parser_used="PDFParser",
             parser_version="1.0.0",
             processing_time=processing_time,
             timestamp=datetime.now(),
-            warnings=[],
+            warnings=all_warnings,
             options_used=options,
         )
 
-        # Step 10: Build and return Document
+        # Step 11: Build Document
         document = Document(
             document_id=file_path.stem,
             content=markdown_content,
@@ -162,10 +188,19 @@ def parse_pdf(
             estimated_reading_time=reading_time,
         )
 
+        # Step 12: Merge QR code content into document
+        if qr_codes:
+            document = merge_qr_content_to_document(
+                document,
+                qr_codes,
+                add_sections=True,
+            )
+            logger.info(f"Merged content from {len(qr_codes)} QR code(s)")
+
         logger.info(
-            f"PDF parsing complete: {word_count} words, "
+            f"PDF parsing complete: {document.word_count} words, "
             f"{len(chapters)} chapters, {len(images)} images, "
-            f"{len(tables)} tables, {processing_time:.2f}s"
+            f"{len(tables)} tables, {len(qr_codes)} QR codes, {processing_time:.2f}s"
         )
 
         return document

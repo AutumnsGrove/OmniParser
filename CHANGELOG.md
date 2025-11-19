@@ -36,6 +36,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **qr**: QR code detection and content extraction for PDFs and images
+  - Detect QR codes in PDF pages and image files (PNG, JPG, WEBP, etc.)
+  - Automatic data type classification (URL, TEXT, VCARD, WIFI, EMAIL, etc.)
+  - URL content fetching with aggressive redirect following (up to 10 hops)
+  - Wayback Machine fallback for unavailable URLs
+  - Smart content merging into document structure
+  - Graceful failure handling with detailed notes
+  - New `QRCodeReference` data model in models.py
+  - New processors: `qr_detector.py`, `qr_content_merger.py`
+  - New utility: `qr_url_fetcher.py`
+  - PDF parser option: `detect_qr_codes=True`
+  - Requires pyzbar library (added to dependencies)
 - **docx**: List extraction with nested list support (ordered and unordered)
 - **docx**: Hyperlink extraction and markdown `[text](url)` formatting
 - **docx**: DOCX test fixtures (5 public domain books from Project Gutenberg)
