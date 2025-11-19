@@ -11,12 +11,13 @@ Functions:
     fetch_from_wayback: Fetch content from Wayback Machine archive.
 """
 
+import ipaddress
 import logging
 import re
-import time
+import socket
 from dataclasses import dataclass, field
-from typing import List, Optional
-from urllib.parse import urljoin, urlparse
+from typing import List, Optional, Tuple
+from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -31,6 +32,105 @@ USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
+
+# Private/reserved IP ranges to block (SSRF prevention)
+BLOCKED_IP_NETWORKS = [
+    ipaddress.ip_network("10.0.0.0/8"),        # Private Class A
+    ipaddress.ip_network("172.16.0.0/12"),     # Private Class B
+    ipaddress.ip_network("192.168.0.0/16"),    # Private Class C
+    ipaddress.ip_network("127.0.0.0/8"),       # Loopback
+    ipaddress.ip_network("169.254.0.0/16"),    # Link-local (includes cloud metadata)
+    ipaddress.ip_network("0.0.0.0/8"),         # Current network
+    ipaddress.ip_network("::1/128"),           # IPv6 loopback
+    ipaddress.ip_network("fc00::/7"),          # IPv6 unique local
+    ipaddress.ip_network("fe80::/10"),         # IPv6 link-local
+]
+
+
+def _is_safe_url(
+    url: str,
+    allowed_domains: Optional[List[str]] = None,
+    blocked_domains: Optional[List[str]] = None,
+) -> Tuple[bool, str]:
+    """Validate that a URL is safe to fetch (SSRF prevention).
+
+    Checks against:
+    - Private IP ranges (10.x, 172.16-31.x, 192.168.x)
+    - Localhost addresses (127.x, localhost, ::1)
+    - Cloud metadata endpoints (169.254.169.254)
+    - Link-local addresses
+    - Non-HTTP schemes (file://, etc.)
+
+    Args:
+        url: URL to validate.
+        allowed_domains: Optional list of allowed domains. If provided, only these
+            domains are allowed.
+        blocked_domains: Optional list of blocked domains.
+
+    Returns:
+        Tuple of (is_safe, reason). If not safe, reason explains why.
+
+    Example:
+        >>> is_safe, reason = _is_safe_url("https://example.com")
+        >>> print(f"Safe: {is_safe}")
+        Safe: True
+        >>> is_safe, reason = _is_safe_url("http://169.254.169.254/metadata")
+        >>> print(f"Safe: {is_safe}, Reason: {reason}")
+        Safe: False, Reason: IP address is in blocked range (link-local/metadata)
+    """
+    try:
+        parsed = urlparse(url)
+
+        # Check scheme
+        if parsed.scheme not in ("http", "https"):
+            return False, f"Blocked scheme: {parsed.scheme}"
+
+        hostname = parsed.hostname
+        if not hostname:
+            return False, "No hostname in URL"
+
+        # Check blocked domains list
+        if blocked_domains:
+            for blocked in blocked_domains:
+                if hostname == blocked or hostname.endswith(f".{blocked}"):
+                    return False, f"Domain is in blocklist: {hostname}"
+
+        # Check allowed domains list (if provided, only these are allowed)
+        if allowed_domains:
+            is_allowed = False
+            for allowed in allowed_domains:
+                if hostname == allowed or hostname.endswith(f".{allowed}"):
+                    is_allowed = True
+                    break
+            if not is_allowed:
+                return False, f"Domain not in allowlist: {hostname}"
+
+        # Resolve hostname to IP address(es)
+        try:
+            # Get all IP addresses for the hostname
+            addr_info = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC)
+            ip_addresses = set()
+            for info in addr_info:
+                ip_str = info[4][0]
+                ip_addresses.add(ip_str)
+        except socket.gaierror as e:
+            return False, f"DNS resolution failed: {e}"
+
+        # Check each resolved IP against blocked ranges
+        for ip_str in ip_addresses:
+            try:
+                ip_addr = ipaddress.ip_address(ip_str)
+                for network in BLOCKED_IP_NETWORKS:
+                    if ip_addr in network:
+                        return False, f"IP address {ip_str} is in blocked range ({network})"
+            except ValueError:
+                # Invalid IP address format, skip
+                continue
+
+        return True, "URL is safe"
+
+    except Exception as e:
+        return False, f"URL validation error: {e}"
 
 
 @dataclass
@@ -59,6 +159,8 @@ def fetch_url_content(
     timeout: int = DEFAULT_TIMEOUT,
     try_variations: bool = True,
     try_wayback: bool = True,
+    allowed_domains: Optional[List[str]] = None,
+    blocked_domains: Optional[List[str]] = None,
 ) -> FetchResult:
     """Fetch content from a URL with multiple fallback strategies.
 
@@ -67,11 +169,17 @@ def fetch_url_content(
     2. Common URL variations (print versions, mobile, etc.)
     3. Wayback Machine archive (last resort)
 
+    Includes SSRF protection to block requests to private networks,
+    localhost, and cloud metadata endpoints.
+
     Args:
         url: URL to fetch content from.
         timeout: Request timeout in seconds.
         try_variations: Whether to try URL pattern variations.
         try_wayback: Whether to fall back to Wayback Machine.
+        allowed_domains: Optional list of allowed domains. If provided, only
+            these domains can be fetched.
+        blocked_domains: Optional list of blocked domains.
 
     Returns:
         FetchResult with content and status information.
@@ -89,6 +197,14 @@ def fetch_url_content(
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
 
+    # SSRF protection: validate URL before fetching
+    is_safe, reason = _is_safe_url(url, allowed_domains, blocked_domains)
+    if not is_safe:
+        logger.warning(f"URL blocked by security check: {url} - {reason}")
+        result.notes.append(f"Security block: {reason}")
+        result.status = "blocked"
+        return result
+
     # Try original URL first
     logger.info(f"Fetching URL: {url}")
     fetch_result = _fetch_single_url(url, timeout)
@@ -102,6 +218,12 @@ def fetch_url_content(
     if try_variations:
         variations = _generate_url_variations(url)
         for var_url in variations:
+            # SSRF check for variation URLs
+            is_safe, reason = _is_safe_url(var_url, allowed_domains, blocked_domains)
+            if not is_safe:
+                result.notes.append(f"Variation {var_url} blocked: {reason}")
+                continue
+
             logger.debug(f"Trying variation: {var_url}")
             var_result = _fetch_single_url(var_url, timeout)
             if var_result.success:

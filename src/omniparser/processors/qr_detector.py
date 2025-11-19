@@ -34,6 +34,73 @@ except ImportError:
     )
 
 
+def _process_pyzbar_results(
+    decoded_objects: List,
+    source_image_id: Optional[str],
+    page_number: Optional[int],
+    qr_id_prefix: str,
+) -> Tuple[List[QRCodeReference], List[str]]:
+    """Process decoded pyzbar objects into QRCodeReference objects.
+
+    This is a shared helper function used by both detect_qr_codes()
+    and detect_qr_codes_from_pil() to avoid code duplication.
+
+    Args:
+        decoded_objects: List of decoded objects from pyzbar.decode().
+        source_image_id: Optional ID of the source image for reference.
+        page_number: Optional page number where image was found.
+        qr_id_prefix: Prefix for generated QR code IDs.
+
+    Returns:
+        Tuple of (list of QRCodeReference objects, list of warning messages).
+    """
+    warnings: List[str] = []
+    qr_codes: List[QRCodeReference] = []
+
+    for idx, obj in enumerate(decoded_objects):
+        # Only process QR codes (not barcodes)
+        if obj.type != "QRCODE":
+            continue
+
+        # Extract raw data
+        try:
+            raw_data = obj.data.decode("utf-8")
+        except UnicodeDecodeError:
+            raw_data = obj.data.decode("latin-1")
+            warnings.append(
+                f"QR code {idx} contained non-UTF-8 data, decoded as latin-1"
+            )
+
+        # Get position/bounding box
+        rect = obj.rect
+        position = {
+            "x": rect.left,
+            "y": rect.top,
+            "width": rect.width,
+            "height": rect.height,
+        }
+
+        # Classify data type
+        data_type = classify_qr_data(raw_data)
+
+        # Create QR code reference
+        qr_ref = QRCodeReference(
+            qr_id=f"{qr_id_prefix}_{idx:03d}",
+            raw_data=raw_data,
+            data_type=data_type,
+            source_image=source_image_id,
+            position=position,
+            page_number=page_number,
+            fetch_status="pending" if data_type == "URL" else "skipped",
+            fetch_notes=[],
+        )
+
+        qr_codes.append(qr_ref)
+        logger.debug(f"Detected QR code: {data_type} - {raw_data[:50]}...")
+
+    return qr_codes, warnings
+
+
 def detect_qr_codes(
     image_data: bytes,
     source_image_id: Optional[str] = None,
@@ -81,50 +148,15 @@ def detect_qr_codes(
         # Detect QR codes using pyzbar
         decoded_objects = pyzbar.decode(image)
 
-        for idx, obj in enumerate(decoded_objects):
-            # Only process QR codes (not barcodes)
-            if obj.type != "QRCODE":
-                continue
-
-            # Extract raw data
-            try:
-                raw_data = obj.data.decode("utf-8")
-            except UnicodeDecodeError:
-                raw_data = obj.data.decode("latin-1")
-                warnings.append(
-                    f"QR code {idx} contained non-UTF-8 data, decoded as latin-1"
-                )
-
-            # Get position/bounding box
-            rect = obj.rect
-            position = {
-                "x": rect.left,
-                "y": rect.top,
-                "width": rect.width,
-                "height": rect.height,
-            }
-
-            # Classify data type
-            data_type = classify_qr_data(raw_data)
-
-            # Create QR code reference
-            qr_ref = QRCodeReference(
-                qr_id=f"{qr_id_prefix}_{idx:03d}",
-                raw_data=raw_data,
-                data_type=data_type,
-                source_image=source_image_id,
-                position=position,
-                page_number=page_number,
-                fetch_status="pending" if data_type == "URL" else "skipped",
-                fetch_notes=[],
-            )
-
-            qr_codes.append(qr_ref)
-            logger.debug(f"Detected QR code: {data_type} - {raw_data[:50]}...")
+        # Process results using shared helper
+        qr_codes, process_warnings = _process_pyzbar_results(
+            decoded_objects, source_image_id, page_number, qr_id_prefix
+        )
+        warnings.extend(process_warnings)
 
     except Exception as e:
         warnings.append(f"QR detection failed: {str(e)}")
-        logger.error(f"QR detection error: {e}")
+        logger.error(f"QR detection error: {e}", exc_info=True)
 
     return qr_codes, warnings
 
@@ -164,45 +196,15 @@ def detect_qr_codes_from_pil(
         # Detect QR codes using pyzbar
         decoded_objects = pyzbar.decode(image)
 
-        for idx, obj in enumerate(decoded_objects):
-            if obj.type != "QRCODE":
-                continue
-
-            try:
-                raw_data = obj.data.decode("utf-8")
-            except UnicodeDecodeError:
-                raw_data = obj.data.decode("latin-1")
-                warnings.append(
-                    f"QR code {idx} contained non-UTF-8 data, decoded as latin-1"
-                )
-
-            rect = obj.rect
-            position = {
-                "x": rect.left,
-                "y": rect.top,
-                "width": rect.width,
-                "height": rect.height,
-            }
-
-            data_type = classify_qr_data(raw_data)
-
-            qr_ref = QRCodeReference(
-                qr_id=f"{qr_id_prefix}_{idx:03d}",
-                raw_data=raw_data,
-                data_type=data_type,
-                source_image=source_image_id,
-                position=position,
-                page_number=page_number,
-                fetch_status="pending" if data_type == "URL" else "skipped",
-                fetch_notes=[],
-            )
-
-            qr_codes.append(qr_ref)
-            logger.debug(f"Detected QR code: {data_type} - {raw_data[:50]}...")
+        # Process results using shared helper
+        qr_codes, process_warnings = _process_pyzbar_results(
+            decoded_objects, source_image_id, page_number, qr_id_prefix
+        )
+        warnings.extend(process_warnings)
 
     except Exception as e:
         warnings.append(f"QR detection failed: {str(e)}")
-        logger.error(f"QR detection error: {e}")
+        logger.error(f"QR detection error: {e}", exc_info=True)
 
     return qr_codes, warnings
 

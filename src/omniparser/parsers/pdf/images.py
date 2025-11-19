@@ -193,6 +193,7 @@ def extract_page_images(
 def scan_pdf_for_qr_codes(
     doc: fitz.Document,
     dpi: int = 150,
+    max_pages: Optional[int] = None,
 ) -> Tuple[List[QRCodeReference], List[str]]:
     """
     Scan all PDF pages for QR codes.
@@ -203,6 +204,7 @@ def scan_pdf_for_qr_codes(
     Args:
         doc: PyMuPDF document object.
         dpi: Resolution for page rendering (higher = more accurate but slower).
+        max_pages: Maximum number of pages to scan. If None, scans all pages.
 
     Returns:
         Tuple of (list of QRCodeReference objects, list of warning messages).
@@ -213,6 +215,9 @@ def scan_pdf_for_qr_codes(
         >>> qr_codes, warnings = scan_pdf_for_qr_codes(doc)
         >>> print(f"Found {len(qr_codes)} QR codes")
         >>> doc.close()
+
+        # Scan only first 10 pages
+        >>> qr_codes, warnings = scan_pdf_for_qr_codes(doc, max_pages=10)
     """
     qr_codes: List[QRCodeReference] = []
     warnings: List[str] = []
@@ -230,7 +235,14 @@ def scan_pdf_for_qr_codes(
 
     qr_counter = 0
 
-    for page_num in range(len(doc)):
+    # Determine number of pages to scan
+    total_pages = len(doc)
+    pages_to_scan = min(total_pages, max_pages) if max_pages else total_pages
+
+    if max_pages and max_pages < total_pages:
+        logger.info(f"Scanning first {max_pages} of {total_pages} pages for QR codes")
+
+    for page_num in range(pages_to_scan):
         try:
             page = doc[page_num]
 

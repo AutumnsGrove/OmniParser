@@ -256,3 +256,174 @@ class TestIsQrDetectionAvailable:
         # This test would need to reload the module to take effect
         # For now, just verify the function exists
         assert callable(is_qr_detection_available)
+
+
+class TestRealQrCodeFixtures:
+    """Tests using actual QR code image fixtures.
+
+    These tests verify that the QR detection works with real QR code images.
+    They require pyzbar to be installed.
+    """
+
+    @pytest.fixture
+    def qr_fixtures_dir(self):
+        """Get the QR fixtures directory path."""
+        return Path(__file__).parent.parent / "fixtures" / "qr"
+
+    @pytest.mark.skipif(
+        not is_qr_detection_available(),
+        reason="pyzbar not installed"
+    )
+    def test_detect_url_qr(self, qr_fixtures_dir):
+        """Test detecting a URL QR code."""
+        qr_file = qr_fixtures_dir / "url_qr.png"
+        if not qr_file.exists():
+            pytest.skip("QR fixture not found - run generate_fixtures.py")
+
+        qr_codes, warnings = detect_qr_codes_from_file(qr_file)
+        assert len(qr_codes) == 1
+        assert qr_codes[0].raw_data == "https://example.com"
+        assert qr_codes[0].data_type == "URL"
+
+    @pytest.mark.skipif(
+        not is_qr_detection_available(),
+        reason="pyzbar not installed"
+    )
+    def test_detect_text_qr(self, qr_fixtures_dir):
+        """Test detecting a text QR code."""
+        qr_file = qr_fixtures_dir / "text_qr.png"
+        if not qr_file.exists():
+            pytest.skip("QR fixture not found - run generate_fixtures.py")
+
+        qr_codes, warnings = detect_qr_codes_from_file(qr_file)
+        assert len(qr_codes) == 1
+        assert qr_codes[0].raw_data == "Hello, World!"
+        assert qr_codes[0].data_type == "TEXT"
+
+    @pytest.mark.skipif(
+        not is_qr_detection_available(),
+        reason="pyzbar not installed"
+    )
+    def test_detect_email_qr(self, qr_fixtures_dir):
+        """Test detecting an email QR code."""
+        qr_file = qr_fixtures_dir / "email_qr.png"
+        if not qr_file.exists():
+            pytest.skip("QR fixture not found - run generate_fixtures.py")
+
+        qr_codes, warnings = detect_qr_codes_from_file(qr_file)
+        assert len(qr_codes) == 1
+        assert qr_codes[0].data_type == "EMAIL"
+
+    @pytest.mark.skipif(
+        not is_qr_detection_available(),
+        reason="pyzbar not installed"
+    )
+    def test_detect_wifi_qr(self, qr_fixtures_dir):
+        """Test detecting a WiFi QR code."""
+        qr_file = qr_fixtures_dir / "wifi_qr.png"
+        if not qr_file.exists():
+            pytest.skip("QR fixture not found - run generate_fixtures.py")
+
+        qr_codes, warnings = detect_qr_codes_from_file(qr_file)
+        assert len(qr_codes) == 1
+        assert qr_codes[0].data_type == "WIFI"
+
+    @pytest.mark.skipif(
+        not is_qr_detection_available(),
+        reason="pyzbar not installed"
+    )
+    def test_detect_vcard_qr(self, qr_fixtures_dir):
+        """Test detecting a vCard QR code."""
+        qr_file = qr_fixtures_dir / "vcard_qr.png"
+        if not qr_file.exists():
+            pytest.skip("QR fixture not found - run generate_fixtures.py")
+
+        qr_codes, warnings = detect_qr_codes_from_file(qr_file)
+        assert len(qr_codes) == 1
+        assert qr_codes[0].data_type == "VCARD"
+
+    @pytest.mark.skipif(
+        not is_qr_detection_available(),
+        reason="pyzbar not installed"
+    )
+    def test_detect_phone_qr(self, qr_fixtures_dir):
+        """Test detecting a phone QR code."""
+        qr_file = qr_fixtures_dir / "phone_qr.png"
+        if not qr_file.exists():
+            pytest.skip("QR fixture not found - run generate_fixtures.py")
+
+        qr_codes, warnings = detect_qr_codes_from_file(qr_file)
+        assert len(qr_codes) == 1
+        assert qr_codes[0].data_type == "PHONE"
+
+    @pytest.mark.skipif(
+        not is_qr_detection_available(),
+        reason="pyzbar not installed"
+    )
+    def test_detect_geo_qr(self, qr_fixtures_dir):
+        """Test detecting a geo location QR code."""
+        qr_file = qr_fixtures_dir / "geo_qr.png"
+        if not qr_file.exists():
+            pytest.skip("QR fixture not found - run generate_fixtures.py")
+
+        qr_codes, warnings = detect_qr_codes_from_file(qr_file)
+        assert len(qr_codes) == 1
+        assert qr_codes[0].data_type == "GEO"
+
+    @pytest.mark.skipif(
+        not is_qr_detection_available(),
+        reason="pyzbar not installed"
+    )
+    def test_detect_sms_qr(self, qr_fixtures_dir):
+        """Test detecting an SMS QR code."""
+        qr_file = qr_fixtures_dir / "sms_qr.png"
+        if not qr_file.exists():
+            pytest.skip("QR fixture not found - run generate_fixtures.py")
+
+        qr_codes, warnings = detect_qr_codes_from_file(qr_file)
+        assert len(qr_codes) == 1
+        assert qr_codes[0].data_type == "SMS"
+
+    @pytest.mark.skipif(
+        not is_qr_detection_available(),
+        reason="pyzbar not installed"
+    )
+    def test_detect_qr_with_position(self, qr_fixtures_dir):
+        """Test that QR detection includes position data."""
+        qr_file = qr_fixtures_dir / "url_qr.png"
+        if not qr_file.exists():
+            pytest.skip("QR fixture not found - run generate_fixtures.py")
+
+        qr_codes, warnings = detect_qr_codes_from_file(qr_file)
+        assert len(qr_codes) == 1
+        assert qr_codes[0].position is not None
+        assert "x" in qr_codes[0].position
+        assert "y" in qr_codes[0].position
+        assert "width" in qr_codes[0].position
+        assert "height" in qr_codes[0].position
+
+    @pytest.mark.skipif(
+        not is_qr_detection_available(),
+        reason="pyzbar not installed"
+    )
+    def test_detect_multiple_qr_types(self, qr_fixtures_dir):
+        """Test detecting different QR types correctly classifies them."""
+        test_cases = [
+            ("url_qr.png", "URL"),
+            ("text_qr.png", "TEXT"),
+            ("email_qr.png", "EMAIL"),
+            ("wifi_qr.png", "WIFI"),
+            ("phone_qr.png", "PHONE"),
+            ("geo_qr.png", "GEO"),
+            ("sms_qr.png", "SMS"),
+        ]
+
+        for filename, expected_type in test_cases:
+            qr_file = qr_fixtures_dir / filename
+            if not qr_file.exists():
+                continue
+
+            qr_codes, warnings = detect_qr_codes_from_file(qr_file)
+            assert len(qr_codes) == 1, f"Expected 1 QR code in {filename}"
+            assert qr_codes[0].data_type == expected_type, \
+                f"Expected {expected_type} for {filename}, got {qr_codes[0].data_type}"
