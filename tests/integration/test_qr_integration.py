@@ -159,6 +159,9 @@ class TestQrContentMergerIntegration:
 
     def test_merge_qr_content_to_document(self, sample_document):
         """Test merging QR content into document."""
+        # Save original word count before merge (since merge modifies in place)
+        original_word_count = sample_document.word_count
+
         qr_codes = [
             QRCodeReference(
                 qr_id="qr_001",
@@ -183,7 +186,11 @@ class TestQrContentMergerIntegration:
         assert "Recipe: Mix ingredients together" in updated_doc.content
 
         # Check word count was updated
-        assert updated_doc.word_count > sample_document.word_count
+        assert updated_doc.word_count > original_word_count
+
+        # Check qr_codes attribute is set
+        assert len(updated_doc.qr_codes) == 1
+        assert updated_doc.qr_codes[0].qr_id == "qr_001"
 
     def test_merge_without_sections(self, sample_document):
         """Test merging QR content without adding sections."""

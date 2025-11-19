@@ -227,6 +227,7 @@ class Document:
         word_count: Total number of words in the document.
         estimated_reading_time: Estimated reading time in minutes (based on avg
             reading speed of 200-250 words per minute).
+        qr_codes: List of QRCodeReference objects found in the document.
 
     Example:
         >>> doc = Document(
@@ -249,6 +250,7 @@ class Document:
     processing_info: ProcessingInfo
     word_count: int
     estimated_reading_time: int
+    qr_codes: List[QRCodeReference] = field(default_factory=list)
 
     def get_chapter(self, chapter_id: int) -> Optional[Chapter]:
         """Get chapter by ID.

@@ -93,6 +93,9 @@ def merge_qr_content_to_document(
     if not qr_codes:
         return document
 
+    # Set QR codes on the document directly
+    document.qr_codes = qr_codes
+
     # Add QR codes to metadata custom_fields
     if document.metadata.custom_fields is None:
         document.metadata.custom_fields = {}
