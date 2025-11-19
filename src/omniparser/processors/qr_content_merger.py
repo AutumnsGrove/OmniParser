@@ -12,6 +12,8 @@ Functions:
 """
 
 import logging
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional
 
 from omniparser.models import Chapter, Document, QRCodeReference
@@ -24,6 +26,9 @@ def process_qr_codes(
     qr_codes: List[QRCodeReference],
     fetch_urls: bool = True,
     timeout: int = 15,
+    parallel: bool = False,
+    max_workers: int = 4,
+    rate_limit: float = 0.5,
 ) -> List[QRCodeReference]:
     """Process QR codes and fetch content for URL types.
 
@@ -31,6 +36,9 @@ def process_qr_codes(
         qr_codes: List of detected QR code references.
         fetch_urls: Whether to fetch content from URL QR codes.
         timeout: Request timeout in seconds.
+        parallel: Whether to fetch URLs in parallel (default: False).
+        max_workers: Maximum number of parallel workers (default: 4).
+        rate_limit: Delay between requests in seconds for rate limiting (default: 0.5).
 
     Returns:
         Updated list of QRCodeReference objects with fetched content.
@@ -41,30 +49,104 @@ def process_qr_codes(
         >>> for qr in processed_qr:
         ...     if qr.fetched_content:
         ...         print(f"Got content from {qr.raw_data}")
+
+        # With parallel fetching
+        >>> processed_qr = process_qr_codes(qr_codes, parallel=True, max_workers=4)
     """
+    # Separate URL and non-URL QR codes
+    url_qr_codes = []
     for qr in qr_codes:
         if qr.data_type == "URL" and fetch_urls:
-            logger.info(f"Fetching content from QR URL: {qr.raw_data}")
-
-            result = fetch_url_content(qr.raw_data, timeout=timeout)
-
-            qr.fetch_status = result.status
-            qr.fetch_notes = result.notes.copy()
-
-            if result.success and result.content:
-                qr.fetched_content = result.content
-                qr.fetch_notes.append(f"Retrieved {len(result.content)} characters")
-
-                if result.source != "original":
-                    qr.fetch_notes.append(f"Content source: {result.source}")
-            else:
-                qr.fetched_content = None
-
+            url_qr_codes.append(qr)
         elif qr.data_type != "URL":
             qr.fetch_status = "skipped"
             qr.fetch_notes.append(f"Non-URL QR code ({qr.data_type}), fetch skipped")
 
+    if not url_qr_codes:
+        return qr_codes
+
+    if parallel and len(url_qr_codes) > 1:
+        # Parallel fetching
+        _fetch_urls_parallel(url_qr_codes, timeout, max_workers, rate_limit)
+    else:
+        # Sequential fetching
+        _fetch_urls_sequential(url_qr_codes, timeout)
+
     return qr_codes
+
+
+def _fetch_urls_sequential(qr_codes: List[QRCodeReference], timeout: int) -> None:
+    """Fetch URLs sequentially.
+
+    Args:
+        qr_codes: List of URL QR codes to fetch.
+        timeout: Request timeout in seconds.
+    """
+    for qr in qr_codes:
+        logger.info(f"Fetching content from QR URL: {qr.raw_data}")
+        result = fetch_url_content(qr.raw_data, timeout=timeout)
+        _apply_fetch_result(qr, result)
+
+
+def _fetch_urls_parallel(
+    qr_codes: List[QRCodeReference],
+    timeout: int,
+    max_workers: int,
+    rate_limit: float,
+) -> None:
+    """Fetch URLs in parallel with rate limiting.
+
+    Args:
+        qr_codes: List of URL QR codes to fetch.
+        timeout: Request timeout in seconds.
+        max_workers: Maximum number of parallel workers.
+        rate_limit: Delay between requests in seconds.
+    """
+    logger.info(f"Fetching {len(qr_codes)} URLs in parallel (max_workers={max_workers})")
+
+    def fetch_with_delay(qr: QRCodeReference, index: int) -> tuple:
+        """Fetch URL with rate limiting delay."""
+        if index > 0 and rate_limit > 0:
+            time.sleep(rate_limit * index)
+        logger.info(f"Fetching content from QR URL: {qr.raw_data}")
+        result = fetch_url_content(qr.raw_data, timeout=timeout)
+        return qr, result
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(fetch_with_delay, qr, idx): qr
+            for idx, qr in enumerate(qr_codes)
+        }
+
+        for future in as_completed(futures):
+            try:
+                qr, result = future.result()
+                _apply_fetch_result(qr, result)
+            except Exception as e:
+                qr = futures[future]
+                qr.fetch_status = "failed"
+                qr.fetch_notes.append(f"Parallel fetch error: {str(e)}")
+                logger.error(f"Parallel fetch failed for {qr.raw_data}: {e}")
+
+
+def _apply_fetch_result(qr: QRCodeReference, result: FetchResult) -> None:
+    """Apply fetch result to a QR code reference.
+
+    Args:
+        qr: QR code reference to update.
+        result: Fetch result to apply.
+    """
+    qr.fetch_status = result.status
+    qr.fetch_notes = result.notes.copy()
+
+    if result.success and result.content:
+        qr.fetched_content = result.content
+        qr.fetch_notes.append(f"Retrieved {len(result.content)} characters")
+
+        if result.source != "original":
+            qr.fetch_notes.append(f"Content source: {result.source}")
+    else:
+        qr.fetched_content = None
 
 
 def merge_qr_content_to_document(

@@ -16,6 +16,7 @@ from omniparser.utils.qr_url_fetcher import (
     _extract_text_from_html,
     _generate_url_variations,
     _fetch_single_url,
+    _is_safe_url,
 )
 
 
@@ -249,9 +250,11 @@ class TestFetchSingleUrl:
 class TestFetchUrlContent:
     """Tests for main fetch_url_content function."""
 
+    @patch('omniparser.utils.qr_url_fetcher._is_safe_url')
     @patch('omniparser.utils.qr_url_fetcher._fetch_single_url')
-    def test_successful_first_attempt(self, mock_fetch):
+    def test_successful_first_attempt(self, mock_fetch, mock_is_safe):
         """Test successful fetch on first attempt."""
+        mock_is_safe.return_value = (True, "URL is safe")
         mock_fetch.return_value = FetchResult(
             success=True,
             content="Test content",
@@ -262,10 +265,12 @@ class TestFetchUrlContent:
         assert result.success is True
         assert result.content == "Test content"
 
+    @patch('omniparser.utils.qr_url_fetcher._is_safe_url')
     @patch('omniparser.utils.qr_url_fetcher._fetch_single_url')
     @patch('omniparser.utils.qr_url_fetcher.fetch_from_wayback')
-    def test_wayback_fallback(self, mock_wayback, mock_fetch):
+    def test_wayback_fallback(self, mock_wayback, mock_fetch, mock_is_safe):
         """Test falling back to Wayback Machine."""
+        mock_is_safe.return_value = (True, "URL is safe")
         mock_fetch.return_value = FetchResult(success=False, notes=["Failed"])
         mock_wayback.return_value = FetchResult(
             success=True,
@@ -282,9 +287,11 @@ class TestFetchUrlContent:
         assert result.success is True
         assert result.source == "wayback"
 
+    @patch('omniparser.utils.qr_url_fetcher._is_safe_url')
     @patch('omniparser.utils.qr_url_fetcher._fetch_single_url')
-    def test_url_normalization(self, mock_fetch):
+    def test_url_normalization(self, mock_fetch, mock_is_safe):
         """Test that URLs are normalized before fetching."""
+        mock_is_safe.return_value = (True, "URL is safe")
         mock_fetch.return_value = FetchResult(success=False, notes=["Failed"])
 
         fetch_url_content("example.com", try_variations=False, try_wayback=False)
@@ -293,8 +300,10 @@ class TestFetchUrlContent:
         call_args = mock_fetch.call_args[0]
         assert call_args[0].startswith("https://")
 
-    def test_all_attempts_fail(self):
+    @patch('omniparser.utils.qr_url_fetcher._is_safe_url')
+    def test_all_attempts_fail(self, mock_is_safe):
         """Test when all fetch attempts fail."""
+        mock_is_safe.return_value = (True, "URL is safe")
         with patch('omniparser.utils.qr_url_fetcher._fetch_single_url') as mock_fetch:
             mock_fetch.return_value = FetchResult(success=False, notes=["Failed"])
 
@@ -366,8 +375,10 @@ class TestFetchFromWayback:
 class TestIntegration:
     """Integration tests for URL fetching pipeline."""
 
-    def test_fetch_result_notes_accumulate(self):
+    @patch('omniparser.utils.qr_url_fetcher._is_safe_url')
+    def test_fetch_result_notes_accumulate(self, mock_is_safe):
         """Test that notes accumulate through the fetch process."""
+        mock_is_safe.return_value = (True, "URL is safe")
         with patch('omniparser.utils.qr_url_fetcher._fetch_single_url') as mock_fetch:
             mock_fetch.return_value = FetchResult(
                 success=False,
@@ -383,3 +394,152 @@ class TestIntegration:
             # Should have accumulated notes
             assert len(result.notes) > 0
             assert any("failed" in note.lower() for note in result.notes)
+
+
+class TestUrlSecurity:
+    """Tests for SSRF protection in URL fetching."""
+
+    def test_blocks_localhost(self):
+        """Test blocking localhost addresses."""
+        is_safe, reason = _is_safe_url("http://127.0.0.1/admin")
+        assert is_safe is False
+        assert "blocked range" in reason.lower()
+
+    def test_blocks_localhost_hostname(self):
+        """Test blocking localhost hostname."""
+        is_safe, reason = _is_safe_url("http://localhost/admin")
+        assert is_safe is False
+        assert "blocked range" in reason.lower()
+
+    def test_blocks_private_class_a(self):
+        """Test blocking private Class A addresses (10.x.x.x)."""
+        is_safe, reason = _is_safe_url("http://10.0.0.1/internal")
+        assert is_safe is False
+        assert "blocked range" in reason.lower()
+
+    def test_blocks_private_class_b(self):
+        """Test blocking private Class B addresses (172.16-31.x.x)."""
+        is_safe, reason = _is_safe_url("http://172.16.0.1/internal")
+        assert is_safe is False
+        assert "blocked range" in reason.lower()
+
+    def test_blocks_private_class_c(self):
+        """Test blocking private Class C addresses (192.168.x.x)."""
+        is_safe, reason = _is_safe_url("http://192.168.1.1/router")
+        assert is_safe is False
+        assert "blocked range" in reason.lower()
+
+    def test_blocks_cloud_metadata(self):
+        """Test blocking cloud metadata endpoint."""
+        is_safe, reason = _is_safe_url("http://169.254.169.254/latest/meta-data")
+        assert is_safe is False
+        assert "blocked range" in reason.lower()
+
+    def test_blocks_link_local(self):
+        """Test blocking link-local addresses."""
+        is_safe, reason = _is_safe_url("http://169.254.1.1/")
+        assert is_safe is False
+        assert "blocked range" in reason.lower()
+
+    def test_blocks_file_scheme(self):
+        """Test blocking file:// URLs."""
+        is_safe, reason = _is_safe_url("file:///etc/passwd")
+        assert is_safe is False
+        assert "blocked scheme" in reason.lower()
+
+    def test_blocks_ftp_scheme(self):
+        """Test blocking ftp:// URLs."""
+        is_safe, reason = _is_safe_url("ftp://example.com/file")
+        assert is_safe is False
+        assert "blocked scheme" in reason.lower()
+
+    @patch('omniparser.utils.qr_url_fetcher.socket.getaddrinfo')
+    def test_allows_valid_https(self, mock_getaddrinfo):
+        """Test allowing valid HTTPS URLs."""
+        # Mock DNS to return a public IP
+        mock_getaddrinfo.return_value = [(2, 1, 6, '', ('93.184.216.34', 0))]
+        is_safe, reason = _is_safe_url("https://example.com/page")
+        assert is_safe is True
+        assert "safe" in reason.lower()
+
+    @patch('omniparser.utils.qr_url_fetcher.socket.getaddrinfo')
+    def test_allows_valid_http(self, mock_getaddrinfo):
+        """Test allowing valid HTTP URLs."""
+        # Mock DNS to return a public IP
+        mock_getaddrinfo.return_value = [(2, 1, 6, '', ('93.184.216.34', 0))]
+        is_safe, reason = _is_safe_url("http://example.com/page")
+        assert is_safe is True
+        assert "safe" in reason.lower()
+
+    def test_blocklist_blocks_domain(self):
+        """Test that blocklist blocks specified domains."""
+        is_safe, reason = _is_safe_url(
+            "https://example.com/page",
+            blocked_domains=["example.com"]
+        )
+        assert is_safe is False
+        assert "blocklist" in reason.lower()
+
+    def test_blocklist_blocks_subdomain(self):
+        """Test that blocklist blocks subdomains."""
+        is_safe, reason = _is_safe_url(
+            "https://api.example.com/data",
+            blocked_domains=["example.com"]
+        )
+        assert is_safe is False
+        assert "blocklist" in reason.lower()
+
+    def test_allowlist_restricts_domains(self):
+        """Test that allowlist restricts to specified domains."""
+        is_safe, reason = _is_safe_url(
+            "https://untrusted.com/page",
+            allowed_domains=["trusted.com"]
+        )
+        assert is_safe is False
+        assert "allowlist" in reason.lower()
+
+    @patch('omniparser.utils.qr_url_fetcher.socket.getaddrinfo')
+    def test_allowlist_allows_specified_domain(self, mock_getaddrinfo):
+        """Test that allowlist allows specified domains."""
+        mock_getaddrinfo.return_value = [(2, 1, 6, '', ('93.184.216.34', 0))]
+        is_safe, reason = _is_safe_url(
+            "https://trusted.com/page",
+            allowed_domains=["trusted.com"]
+        )
+        assert is_safe is True
+
+    @patch('omniparser.utils.qr_url_fetcher.socket.getaddrinfo')
+    def test_allowlist_allows_subdomain(self, mock_getaddrinfo):
+        """Test that allowlist allows subdomains of specified domains."""
+        mock_getaddrinfo.return_value = [(2, 1, 6, '', ('93.184.216.34', 0))]
+        is_safe, reason = _is_safe_url(
+            "https://api.trusted.com/data",
+            allowed_domains=["trusted.com"]
+        )
+        assert is_safe is True
+
+    @patch('omniparser.utils.qr_url_fetcher._is_safe_url')
+    @patch('omniparser.utils.qr_url_fetcher._fetch_single_url')
+    def test_fetch_url_content_blocks_unsafe(self, mock_fetch, mock_is_safe):
+        """Test that fetch_url_content respects SSRF protection."""
+        mock_is_safe.return_value = (False, "IP address is in blocked range")
+
+        result = fetch_url_content("http://10.0.0.1/admin")
+
+        assert result.success is False
+        assert result.status == "blocked"
+        assert any("security" in note.lower() for note in result.notes)
+        # Should not attempt to fetch
+        mock_fetch.assert_not_called()
+
+    def test_handles_invalid_hostname(self):
+        """Test handling URLs with no hostname."""
+        is_safe, reason = _is_safe_url("http:///path")
+        assert is_safe is False
+        assert "hostname" in reason.lower()
+
+    def test_handles_dns_resolution_failure(self):
+        """Test handling DNS resolution failures."""
+        is_safe, reason = _is_safe_url("http://nonexistent.invalid/page")
+        assert is_safe is False
+        assert "dns" in reason.lower() or "resolution" in reason.lower()

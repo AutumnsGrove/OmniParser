@@ -100,4 +100,5 @@ dev = [
     "mypy>=1.18.2",
     "pytest>=8.4.2",
     "pytest-cov>=7.0.0",
+    "qrcode[pil]>=8.2",
 ]

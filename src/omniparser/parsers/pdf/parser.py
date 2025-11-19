@@ -68,6 +68,7 @@ def parse_pdf(
             - qr_fetch_urls: Fetch content from QR code URLs (default: True)
             - qr_timeout: Timeout for QR URL fetching in seconds (default: 15)
             - qr_dpi: DPI for rendering pages for QR detection (default: 150)
+            - max_qr_scan_pages: Max pages to scan for QR codes (default: None = all)
 
     Returns:
         Document object with parsed content, metadata, and processing info.
@@ -99,6 +100,7 @@ def parse_pdf(
     qr_fetch_urls = options.get("qr_fetch_urls", True)
     qr_timeout = options.get("qr_timeout", 15)
     qr_dpi = options.get("qr_dpi", 150)
+    max_qr_scan_pages = options.get("max_qr_scan_pages")
 
     # Step 1: Validate and load PDF
     logger.info(f"Loading PDF: {file_path}")
@@ -149,7 +151,9 @@ def parse_pdf(
         qr_warnings: List[str] = []
         if detect_qr_codes_flag:
             logger.info("Scanning for QR codes")
-            qr_codes, qr_warnings = scan_pdf_for_qr_codes(doc, dpi=qr_dpi)
+            qr_codes, qr_warnings = scan_pdf_for_qr_codes(
+                doc, dpi=qr_dpi, max_pages=max_qr_scan_pages
+            )
 
             if qr_codes:
                 logger.info(f"Found {len(qr_codes)} QR code(s), processing...")
