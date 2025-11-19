@@ -23,6 +23,8 @@
 | 📋 Markdown | ✅ **Production** | Frontmatter, code blocks, link preservation |
 | 📃 Text | ✅ **Production** | Auto chapter detection, encoding handling |
 
+**QR Code Support:** ✅ Detect QR codes in PDFs and images, fetch URL content (optional, requires `pyzbar`)
+
 **AI Features:** ✅ Auto-tagging, summarization, image analysis, quality scoring (optional, requires `ai` extra)
 
 ---
@@ -114,6 +116,22 @@ doc = parse_document("research-paper.pdf", {
 # 89 tests passing | Handles complex layouts
 ```
 
+**PDF with QR Code Detection** - Extract and fetch QR code content
+```python
+doc = parse_document("document-with-qr.pdf", {
+    "detect_qr_codes": True,      # Enable QR detection
+    "qr_fetch_urls": True,        # Fetch content from URL QR codes
+    "qr_timeout": 15,             # URL fetch timeout (seconds)
+    "qr_dpi": 150                 # DPI for page rendering
+})
+# Detected QR codes available in doc.qr_codes
+# Fetched URL content merged into document
+for qr in doc.qr_codes:
+    print(f"QR {qr.qr_id}: {qr.data_type} - {qr.raw_data}")
+    if qr.fetched_content:
+        print(f"  Content: {qr.fetched_content[:100]}...")
+```
+
 **DOCX Parser** - Microsoft Word documents (Beta)
 ```python
 doc = parse_document("report.docx")
@@ -134,6 +152,61 @@ doc = parse_document("notes.txt")
 # Auto chapter detection, encoding handling
 # 33 tests passing | Smart formatting
 ```
+
+### QR Code Detection (Optional)
+
+**Detect and extract content from QR codes in PDFs and images:**
+
+```python
+from omniparser import parse_document
+
+# Parse PDF with QR code detection enabled
+doc = parse_document("document.pdf", {
+    "detect_qr_codes": True,
+    "qr_fetch_urls": True,
+})
+
+# Access detected QR codes
+print(f"Found {len(doc.qr_codes)} QR codes")
+
+for qr in doc.qr_codes:
+    print(f"QR {qr.qr_id}: {qr.data_type}")
+    print(f"  Data: {qr.raw_data}")
+    if qr.fetched_content:
+        print(f"  Fetched: {len(qr.fetched_content)} characters")
+```
+
+**QR Code Features:**
+- ✅ **Multi-format detection** - URL, Email, Phone, WiFi, vCard, Geo, SMS, Text
+- ✅ **Automatic URL fetching** - Retrieve content from URL QR codes
+- ✅ **Wayback Machine fallback** - Access archived content for dead links
+- ✅ **Document integration** - Merge fetched content into document
+- ✅ **Position tracking** - Track QR code location and page number
+
+**Standalone Image Scanning:**
+```python
+from omniparser.processors.qr_detector import scan_image_for_qr_and_fetch
+
+# Scan any image file for QR codes
+qr_codes, warnings = scan_image_for_qr_and_fetch("image.png", fetch_urls=True)
+
+for qr in qr_codes:
+    print(f"{qr.data_type}: {qr.raw_data}")
+```
+
+**Requirements:** Requires `pyzbar` library and system `zbar` library:
+```bash
+# Install pyzbar
+pip install pyzbar
+
+# On Ubuntu/Debian
+apt-get install libzbar0
+
+# On macOS
+brew install zbar
+```
+
+---
 
 ### AI-Powered Features (Optional)
 
@@ -174,9 +247,9 @@ print(f"Readability: {quality['readability_score']}/10")
 - ✅ **Multi-Provider Support** - Anthropic, OpenAI, OpenRouter, Ollama, LM Studio
 
 **Performance:**
-- 696 tests passing (100% success rate)
+- 1070+ tests (100% success rate)
 - All parsers production-ready except DOCX (beta)
-- AI features fully optional (no dependency overhead)
+- AI features and QR detection fully optional (no dependency overhead)
 
 ---
 
@@ -658,6 +731,10 @@ class BaseParser(ABC):
   - requests>=2.31.0 - HTTP requests for URL fetching
   - trafilatura>=1.6.0 - Main HTML content extraction
   - readability-lxml>=0.8.0 - Fallback content extraction
+
+- **QR Code Detection:**
+  - pyzbar>=0.1.9 - QR code detection library
+  - Requires system library: `libzbar0` (Linux) or `zbar` (macOS)
 
 ### Installed but Not Yet Used (Future Parsers)
 - **PDF (Phase 2.4):** PyMuPDF>=1.23.0, pytesseract>=0.3.10
