@@ -7,6 +7,7 @@ in a universal format, enabling consistent handling across different file types
 
 Classes:
     ImageReference: Reference to an image within a document.
+    QRCodeReference: Reference to a QR code found in the document.
     Chapter: A chapter or section with position tracking.
     Metadata: Universal metadata applicable to any document.
     ProcessingInfo: Information about the parsing execution.
@@ -47,6 +48,45 @@ class ImageReference:
     alt_text: Optional[str] = None
     size: Optional[tuple[int, int]] = None
     format: str = "unknown"
+
+
+@dataclass
+class QRCodeReference:
+    """Reference to a QR code found in the document.
+
+    Attributes:
+        qr_id: Unique identifier for the QR code.
+        raw_data: Raw data encoded in the QR code.
+        data_type: Type of data (URL, TEXT, VCARD, WIFI, etc.).
+        source_image: Image ID or file path where QR code was found.
+        position: Bounding box position as dict with x, y, width, height.
+        page_number: Page number where QR code was found (1-indexed).
+        fetched_content: Content retrieved from URL (if data_type is URL).
+        fetch_status: Status of content fetch (success, partial, failed, skipped).
+        fetch_notes: List of notes about the fetch process.
+
+    Example:
+        >>> qr = QRCodeReference(
+        ...     qr_id="qr_001",
+        ...     raw_data="https://example.com/recipe",
+        ...     data_type="URL",
+        ...     source_image="img_005",
+        ...     page_number=3,
+        ...     fetched_content="Recipe content here...",
+        ...     fetch_status="success",
+        ...     fetch_notes=["Followed 2 redirects"]
+        ... )
+    """
+
+    qr_id: str
+    raw_data: str
+    data_type: str = "TEXT"
+    source_image: Optional[str] = None
+    position: Optional[Dict[str, int]] = None
+    page_number: Optional[int] = None
+    fetched_content: Optional[str] = None
+    fetch_status: str = "pending"
+    fetch_notes: List[str] = field(default_factory=list)
 
 
 @dataclass

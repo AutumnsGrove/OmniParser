@@ -8,6 +8,7 @@ and creating ImageReference objects with metadata.
 Functions:
     extract_pdf_images: Extract all images from a PDF document
     extract_page_images: Extract images from a single PDF page
+    scan_pdf_for_qr_codes: Scan all PDF pages for QR codes
 """
 
 import logging
@@ -16,13 +17,16 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 import fitz  # PyMuPDF
+from PIL import Image
+from io import BytesIO
 
-from ...models import ImageReference
+from ...models import ImageReference, QRCodeReference
 from ...processors.image_extractor import (
     get_image_dimensions,
     save_image,
     validate_image_data,
 )
+from ...processors.qr_detector import detect_qr_codes_from_pil, is_qr_detection_available
 from .utils import MIN_IMAGE_SIZE
 
 logger = logging.getLogger(__name__)
@@ -184,3 +188,84 @@ def extract_page_images(
             )
 
     return images, counter
+
+
+def scan_pdf_for_qr_codes(
+    doc: fitz.Document,
+    dpi: int = 150,
+) -> Tuple[List[QRCodeReference], List[str]]:
+    """
+    Scan all PDF pages for QR codes.
+
+    Renders each page as an image and scans for QR codes. This method
+    catches QR codes both in embedded images and rendered on pages.
+
+    Args:
+        doc: PyMuPDF document object.
+        dpi: Resolution for page rendering (higher = more accurate but slower).
+
+    Returns:
+        Tuple of (list of QRCodeReference objects, list of warning messages).
+
+    Example:
+        >>> import fitz
+        >>> doc = fitz.open("document.pdf")
+        >>> qr_codes, warnings = scan_pdf_for_qr_codes(doc)
+        >>> print(f"Found {len(qr_codes)} QR codes")
+        >>> doc.close()
+    """
+    qr_codes: List[QRCodeReference] = []
+    warnings: List[str] = []
+
+    if not is_qr_detection_available():
+        warnings.append(
+            "QR detection unavailable: pyzbar not installed. "
+            "Install with: pip install pyzbar"
+        )
+        return qr_codes, warnings
+
+    # Calculate zoom factor for desired DPI (default PDF is 72 DPI)
+    zoom = dpi / 72.0
+    matrix = fitz.Matrix(zoom, zoom)
+
+    qr_counter = 0
+
+    for page_num in range(len(doc)):
+        try:
+            page = doc[page_num]
+
+            # Render page to pixmap
+            pixmap = page.get_pixmap(matrix=matrix)
+
+            # Convert to PIL Image
+            img_data = pixmap.tobytes("png")
+            pil_image = Image.open(BytesIO(img_data))
+
+            # Scan for QR codes
+            page_qr_codes, page_warnings = detect_qr_codes_from_pil(
+                pil_image,
+                source_image_id=f"page_{page_num + 1}",
+                page_number=page_num + 1,
+                qr_id_prefix=f"qr_p{page_num + 1}",
+            )
+
+            # Update QR IDs to be globally unique
+            for qr in page_qr_codes:
+                qr.qr_id = f"qr_{qr_counter:03d}"
+                qr_counter += 1
+
+            qr_codes.extend(page_qr_codes)
+            warnings.extend(page_warnings)
+
+            if page_qr_codes:
+                logger.debug(
+                    f"Found {len(page_qr_codes)} QR code(s) on page {page_num + 1}"
+                )
+
+        except Exception as e:
+            warning_msg = f"QR scan failed for page {page_num + 1}: {str(e)}"
+            warnings.append(warning_msg)
+            logger.warning(warning_msg)
+
+    logger.info(f"QR scan complete: found {len(qr_codes)} QR code(s)")
+    return qr_codes, warnings
