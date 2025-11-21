@@ -613,57 +613,57 @@ git commit -m "type: msg" # Commit (follow style guide!)
 
 ---
 
-<!-- BaseProject: ClaudeUsage Guide Index -->
+<!-- BaseProject: AgentUsage Guide Index -->
 ## When to Read Specific Guides
 
-**The `ClaudeUsage/` directory contains comprehensive workflow guides. Read the full guide when you encounter these situations:**
+**The `AgentUsage/` directory contains comprehensive workflow guides. Read the full guide when you encounter these situations:**
 
 ### Secrets & API Keys
-- **When managing API keys or secrets** → Read `ClaudeUsage/secrets_management.md`
-- **Before implementing secrets loading** → Read `ClaudeUsage/secrets_management.md`
-- **For advanced security patterns** → Read `ClaudeUsage/secrets_advanced.md`
+- **When managing API keys or secrets** → Read `AgentUsage/secrets_management.md`
+- **Before implementing secrets loading** → Read `AgentUsage/secrets_management.md`
+- **For advanced security patterns** → Read `AgentUsage/secrets_advanced.md`
 
 ### Package Management
-- **When using UV package manager** → Read `ClaudeUsage/uv_usage.md`
-- **Before creating/modifying pyproject.toml** → Read `ClaudeUsage/uv_usage.md`
-- **When managing Python dependencies** → Read `ClaudeUsage/uv_usage.md`
+- **When using UV package manager** → Read `AgentUsage/uv_usage.md`
+- **Before creating/modifying pyproject.toml** → Read `AgentUsage/uv_usage.md`
+- **When managing Python dependencies** → Read `AgentUsage/uv_usage.md`
 
 ### Version Control
-- **For detailed git workflow** → Read `ClaudeUsage/git_workflow.md`
-- **For conventional commits** → Read `ClaudeUsage/git_conventional_commits.md`
-- **For commit message best practices** → Read `ClaudeUsage/git_commit_guide.md`
+- **For detailed git workflow** → Read `AgentUsage/git_workflow.md`
+- **For conventional commits** → Read `AgentUsage/git_conventional_commits.md`
+- **For commit message best practices** → Read `AgentUsage/git_commit_guide.md`
 
 ### Search & Research
-- **When searching across 20+ files** → Read `ClaudeUsage/house_agents.md`
-- **When finding patterns in codebase** → Read `ClaudeUsage/house_agents.md`
-- **For complex multi-step research** → Read `ClaudeUsage/research_workflow.md`
+- **When searching across 20+ files** → Read `AgentUsage/house_agents.md`
+- **When finding patterns in codebase** → Read `AgentUsage/house_agents.md`
+- **For complex multi-step research** → Read `AgentUsage/research_workflow.md`
 
 ### Testing
-- **Before writing tests** → Read `ClaudeUsage/testing_strategies.md`
-- **When implementing test coverage** → Read `ClaudeUsage/testing_strategies.md`
-- **For test organization patterns** → Read `ClaudeUsage/testing_strategies.md`
+- **Before writing tests** → Read `AgentUsage/testing_strategies.md`
+- **When implementing test coverage** → Read `AgentUsage/testing_strategies.md`
+- **For test organization patterns** → Read `AgentUsage/testing_strategies.md`
 
 ### Code Quality
-- **When refactoring code** → Read `ClaudeUsage/code_style_guide.md`
-- **Before major code changes** → Read `ClaudeUsage/code_quality.md`
-- **For documentation standards** → Read `ClaudeUsage/documentation_standards.md`
+- **When refactoring code** → Read `AgentUsage/code_style_guide.md`
+- **Before major code changes** → Read `AgentUsage/code_quality.md`
+- **For documentation standards** → Read `AgentUsage/documentation_standards.md`
 
 ### Project Setup & Structure
-- **When setting up new components** → Read `ClaudeUsage/project_setup.md`
-- **For directory structure patterns** → Read `ClaudeUsage/project_structure.md`
-- **Setting up CI/CD** → Read `ClaudeUsage/ci_cd_patterns.md`
+- **When setting up new components** → Read `AgentUsage/project_setup.md`
+- **For directory structure patterns** → Read `AgentUsage/project_structure.md`
+- **Setting up CI/CD** → Read `AgentUsage/ci_cd_patterns.md`
 
 ### Docker & Deployment
-- **When containerizing the application** → Read `ClaudeUsage/docker_guide.md`
-- **For multi-stage Docker builds** → Read `ClaudeUsage/docker_guide.md`
+- **When containerizing the application** → Read `AgentUsage/docker_guide.md`
+- **For multi-stage Docker builds** → Read `AgentUsage/docker_guide.md`
 
 ### Multi-Language Projects
-- **When working with multiple languages** → Read `ClaudeUsage/multi_language_guide.md`
-- **For language-specific best practices** → Read `ClaudeUsage/multi_language_guide.md`
+- **When working with multiple languages** → Read `AgentUsage/multi_language_guide.md`
+- **For language-specific best practices** → Read `AgentUsage/multi_language_guide.md`
 
-**Complete Guide Index:** See `ClaudeUsage/README.md` for full documentation index
+**Complete Guide Index:** See `AgentUsage/README.md` for full documentation index
 
-<!-- /BaseProject: ClaudeUsage Guide Index -->
+<!-- /BaseProject: AgentUsage Guide Index -->
 
 ---
 
@@ -682,7 +682,7 @@ git commit -m "type: msg" # Commit (follow style guide!)
 - **house-research**: Searching across 20+ files for patterns, TODOs, or function definitions
 - **house-git**: Analyzing large diffs, reviewing changes before commits, branch comparisons
 
-**Installation & Usage:** See `ClaudeUsage/house_agents.md` for detailed setup and examples
+**Installation & Usage:** See `AgentUsage/house_agents.md` for detailed setup and examples
 
 **Credit:** House Agents by [@houseworthe](https://github.com/houseworthe/house-agents) (v0.2.0-beta)
 
