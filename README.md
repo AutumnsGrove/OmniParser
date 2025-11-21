@@ -69,52 +69,7 @@ for chapter in doc.chapters:
 
 ## Architecture Overview
 
-```mermaid
-flowchart TB
-    subgraph Input["📥 Input Sources"]
-        EPUB[".epub"]
-        PDF[".pdf"]
-        HTML[".html / URL"]
-        DOCX[".docx"]
-        MD[".md"]
-        TXT[".txt"]
-    end
-
-    subgraph Core["🔧 OmniParser Core"]
-        API["parse_document()"]
-        FD["Format Detector"]
-
-        subgraph Parsers["Format Parsers"]
-            EP["EPUB Parser"]
-            PP["PDF Parser"]
-            HP["HTML Parser"]
-            DP["DOCX Parser"]
-            MP["Markdown Parser"]
-            TP["Text Parser"]
-        end
-
-        subgraph Processors["Post-Processors"]
-            CD["Chapter Detector"]
-            TC["Text Cleaner"]
-            ME["Metadata Extractor"]
-            QR["QR Code Detector"]
-        end
-    end
-
-    subgraph Output["📤 Universal Output"]
-        DOC["Document Model"]
-        CH["Chapters"]
-        IMG["Images"]
-        META["Metadata"]
-        QROUT["QR Codes"]
-    end
-
-    Input --> API
-    API --> FD
-    FD --> Parsers
-    Parsers --> Processors
-    Processors --> Output
-```
+![Architecture Overview](docs/diagrams/architecture-overview.png)
 
 ---
 
@@ -159,44 +114,7 @@ for qr in qr_codes:
 
 ### QR Code Data Flow
 
-```mermaid
-flowchart LR
-    subgraph Detection["🔍 Detection"]
-        PDF["PDF Page"]
-        IMG["Image File"]
-        SCAN["pyzbar Scanner"]
-    end
-
-    subgraph Classification["🏷️ Classification"]
-        URL["URL"]
-        EMAIL["Email"]
-        PHONE["Phone"]
-        WIFI["WiFi"]
-        VCARD["vCard"]
-        GEO["Geo"]
-        SMS["SMS"]
-        TEXT["Text"]
-    end
-
-    subgraph Fetching["🌐 URL Fetching"]
-        FETCH["HTTP Request"]
-        REDIRECT["Follow Redirects"]
-        WAYBACK["Wayback Fallback"]
-    end
-
-    subgraph Output["📦 Output"]
-        QRREF["QRCodeReference"]
-        MERGE["Merge to Document"]
-    end
-
-    PDF --> SCAN
-    IMG --> SCAN
-    SCAN --> Classification
-    URL --> Fetching
-    Classification --> QRREF
-    Fetching --> QRREF
-    QRREF --> MERGE
-```
+![QR Code Data Flow](docs/diagrams/qr-code-dataflow.png)
 
 ### Supported QR Data Types
 
@@ -291,62 +209,7 @@ cp secrets_template.json secrets.json
 
 All parsers output consistent data structures:
 
-```mermaid
-classDiagram
-    class Document {
-        +str document_id
-        +str content
-        +List~Chapter~ chapters
-        +List~ImageReference~ images
-        +List~QRCodeReference~ qr_codes
-        +Metadata metadata
-        +ProcessingInfo processing_info
-        +int word_count
-        +int estimated_reading_time
-    }
-
-    class Chapter {
-        +str chapter_id
-        +str title
-        +str content
-        +int start_position
-        +int end_position
-        +int word_count
-        +int level
-    }
-
-    class ImageReference {
-        +str image_id
-        +int position
-        +str file_path
-        +str alt_text
-        +tuple size
-        +str format
-    }
-
-    class QRCodeReference {
-        +str qr_id
-        +str raw_data
-        +str data_type
-        +int page_number
-        +str fetched_content
-        +str fetch_status
-    }
-
-    class Metadata {
-        +str title
-        +str author
-        +str publisher
-        +str language
-        +str isbn
-        +dict custom_fields
-    }
-
-    Document --> Chapter
-    Document --> ImageReference
-    Document --> QRCodeReference
-    Document --> Metadata
-```
+![Data Models](docs/diagrams/data-models.png)
 
 ---
 
