@@ -60,6 +60,7 @@ class AIProvider(Enum):
     OPENROUTER = "openrouter"
     OLLAMA = "ollama"
     LMSTUDIO = "lmstudio"
+    CLOUDFLARE = "cloudflare"
 
 
 # Type aliases for better type safety
@@ -218,6 +219,7 @@ class AIConfig:
             AIProvider.OPENROUTER: "meta-llama/llama-3.2-3b-instruct:free",
             AIProvider.OLLAMA: "llama3.2:latest",
             AIProvider.LMSTUDIO: "local-model",
+            AIProvider.CLOUDFLARE: "@cf/meta/llama-3.2-11b-vision-instruct",
         }
         return provider_defaults.get(self.provider, "gpt-3.5-turbo")
 
@@ -320,6 +322,38 @@ class AIConfig:
                 api_key="lmstudio", base_url=base_url, timeout=self.timeout
             )
 
+        elif self.provider == AIProvider.CLOUDFLARE:
+            # Cloudflare Workers AI uses a custom REST API
+            # We store credentials and return a placeholder client
+            # Actual API calls are made via requests in _generate_cloudflare
+
+            # Check secrets.json first, then environment variables
+            self._cloudflare_account_id = (
+                self.options.get("cloudflare_account_id")
+                or _SECRETS.get("cloudflare_account_id")
+                or os.getenv("CLOUDFLARE_ACCOUNT_ID")
+            )
+            self._cloudflare_api_token = (
+                self.options.get("cloudflare_api_token")
+                or _SECRETS.get("cloudflare_api_token")
+                or os.getenv("CLOUDFLARE_API_TOKEN")
+            )
+
+            if not self._cloudflare_account_id:
+                raise ValueError(
+                    "CLOUDFLARE_ACCOUNT_ID not found. "
+                    "Add to secrets.json or set environment variable."
+                )
+            if not self._cloudflare_api_token:
+                raise ValueError(
+                    "CLOUDFLARE_API_TOKEN not found. "
+                    "Add to secrets.json or set environment variable."
+                )
+
+            logger.info("Initialized Cloudflare Workers AI with model: %s", self.model)
+            # Return None as we use requests directly for Cloudflare
+            return None  # type: ignore[return-value]
+
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
 
@@ -348,6 +382,8 @@ class AIConfig:
             try:
                 if self.provider == AIProvider.ANTHROPIC:
                     return self._generate_anthropic(prompt, system)
+                elif self.provider == AIProvider.CLOUDFLARE:
+                    return self._generate_cloudflare(prompt, system)
                 else:
                     # OpenAI, OpenRouter, Ollama, and LM Studio all use OpenAI-compatible API
                     return self._generate_openai(prompt, system)
@@ -489,3 +525,60 @@ class AIConfig:
             messages=messages,  # type: ignore[arg-type]
         )
         return response.choices[0].message.content or ""
+
+    def _generate_cloudflare(self, prompt: str, system: Optional[str]) -> str:
+        """
+        Generate text using Cloudflare Workers AI.
+
+        Uses Cloudflare's REST API for inference. Supports both text and
+        vision models (e.g., @cf/meta/llama-3.2-11b-vision-instruct).
+
+        Args:
+            prompt: User prompt.
+            system: System prompt (optional).
+
+        Returns:
+            Generated text.
+
+        Raises:
+            requests.RequestException: If API call fails.
+            ValueError: If response format is unexpected.
+        """
+        import requests
+
+        url = (
+            f"https://api.cloudflare.com/client/v4/accounts/"
+            f"{self._cloudflare_account_id}/ai/run/{self.model}"
+        )
+
+        headers = {
+            "Authorization": f"Bearer {self._cloudflare_api_token}",
+            "Content-Type": "application/json",
+        }
+
+        # Build messages array
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        payload = {
+            "messages": messages,
+            "max_tokens": self.max_tokens,
+        }
+
+        response = requests.post(
+            url, headers=headers, json=payload, timeout=self.timeout
+        )
+        response.raise_for_status()
+
+        result = response.json()
+        if not result.get("success"):
+            errors = result.get("errors", [])
+            raise ValueError(f"Cloudflare API error: {errors}")
+
+        # Extract response text
+        ai_result = result.get("result", {})
+        if isinstance(ai_result, dict):
+            return ai_result.get("response", "")
+        return str(ai_result)
