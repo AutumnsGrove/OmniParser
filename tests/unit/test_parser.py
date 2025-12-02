@@ -17,10 +17,15 @@ from omniparser import (
 )
 from omniparser.exceptions import FileReadError, UnsupportedFormatError
 from omniparser.models import Document, Metadata, ProcessingInfo
+from omniparser.parser import _clear_parser_cache
 
 
 class TestParseDocument:
     """Tests for parse_document() function."""
+
+    def setup_method(self):
+        """Clear parser cache before each test to ensure mocks work."""
+        _clear_parser_cache()
 
     def test_parse_document_accepts_string_path(self, tmp_path):
         """Test that parse_document accepts string paths."""
@@ -28,8 +33,8 @@ class TestParseDocument:
         test_file = tmp_path / "test.epub"
         test_file.write_text("dummy content")
 
-        # Mock EPUBParser to avoid needing a real EPUB
-        with patch("omniparser.parser.EPUBParser") as MockParser:
+        # Mock EPUBParser at the actual import location (lazy import)
+        with patch("omniparser.parsers.epub_parser.EPUBParser") as MockParser:
             mock_parser_instance = Mock()
             mock_doc = Mock(spec=Document)
             mock_parser_instance.parse.return_value = mock_doc
@@ -48,8 +53,8 @@ class TestParseDocument:
         test_file = tmp_path / "test.epub"
         test_file.write_text("dummy content")
 
-        # Mock EPUBParser
-        with patch("omniparser.parser.EPUBParser") as MockParser:
+        # Mock EPUBParser at the actual import location (lazy import)
+        with patch("omniparser.parsers.epub_parser.EPUBParser") as MockParser:
             mock_parser_instance = Mock()
             mock_doc = Mock(spec=Document)
             mock_parser_instance.parse.return_value = mock_doc
@@ -80,7 +85,7 @@ class TestParseDocument:
         test_file = tmp_path / "test.epub"
         test_file.write_text("dummy content")
 
-        with patch("omniparser.parser.EPUBParser") as MockParser:
+        with patch("omniparser.parsers.epub_parser.EPUBParser") as MockParser:
             mock_parser_instance = Mock()
             mock_doc = Mock(spec=Document)
             mock_parser_instance.parse.return_value = mock_doc
@@ -100,7 +105,7 @@ class TestParseDocument:
 
         options = {"extract_images": False, "clean_text": True, "detect_chapters": True}
 
-        with patch("omniparser.parser.EPUBParser") as MockParser:
+        with patch("omniparser.parsers.epub_parser.EPUBParser") as MockParser:
             mock_parser_instance = Mock()
             mock_doc = Mock(spec=Document)
             mock_parser_instance.parse.return_value = mock_doc
@@ -116,7 +121,7 @@ class TestParseDocument:
         test_file = tmp_path / "test.pdf"
         test_file.write_text("dummy content")
 
-        with patch("omniparser.parser.parse_pdf") as mock_parse_pdf:
+        with patch("omniparser.parsers.pdf.parse_pdf") as mock_parse_pdf:
             mock_doc = Mock(spec=Document)
             mock_parse_pdf.return_value = mock_doc
 
@@ -131,7 +136,7 @@ class TestParseDocument:
         test_file = tmp_path / "test.docx"
         test_file.write_text("dummy content")
 
-        with patch("omniparser.parser.parse_docx") as mock_parse_docx:
+        with patch("omniparser.parsers.docx.parse_docx") as mock_parse_docx:
             mock_doc = Mock(spec=Document)
             mock_parse_docx.return_value = mock_doc
 
@@ -156,7 +161,7 @@ class TestParseDocument:
         test_file = tmp_path / "test.html"
         test_file.write_text("<html><body><h1>Test</h1></body></html>")
 
-        with patch("omniparser.parser.HTMLParser") as MockParser:
+        with patch("omniparser.parsers.html.HTMLParser") as MockParser:
             mock_parser_instance = Mock()
             mock_doc = Mock(spec=Document)
             mock_parser_instance.parse.return_value = mock_doc
@@ -174,7 +179,7 @@ class TestParseDocument:
         test_file = tmp_path / "test.htm"
         test_file.write_text("<html><body><h1>Test</h1></body></html>")
 
-        with patch("omniparser.parser.HTMLParser") as MockParser:
+        with patch("omniparser.parsers.html.HTMLParser") as MockParser:
             mock_parser_instance = Mock()
             mock_doc = Mock(spec=Document)
             mock_parser_instance.parse.return_value = mock_doc
@@ -192,7 +197,7 @@ class TestParseDocument:
         test_file = tmp_path / "test.md"
         test_file.write_text("# Test\n\nDummy content")
 
-        with patch("omniparser.parser.MarkdownParser") as MockParser:
+        with patch("omniparser.parsers.markdown_parser.MarkdownParser") as MockParser:
             mock_parser_instance = Mock()
             mock_doc = Mock(spec=Document)
             mock_parser_instance.parse.return_value = mock_doc
@@ -210,7 +215,7 @@ class TestParseDocument:
         test_file = tmp_path / "test.txt"
         test_file.write_text("dummy content")
 
-        with patch("omniparser.parser.TextParser") as MockParser:
+        with patch("omniparser.parsers.text_parser.TextParser") as MockParser:
             mock_parser_instance = Mock()
             mock_doc = Mock(spec=Document)
             mock_parser_instance.parse.return_value = mock_doc
@@ -238,7 +243,7 @@ class TestParseDocument:
         test_file = tmp_path / "test.EPUB"
         test_file.write_text("dummy content")
 
-        with patch("omniparser.parser.EPUBParser") as MockParser:
+        with patch("omniparser.parsers.epub_parser.EPUBParser") as MockParser:
             mock_parser_instance = Mock()
             mock_doc = Mock(spec=Document)
             mock_parser_instance.parse.return_value = mock_doc
