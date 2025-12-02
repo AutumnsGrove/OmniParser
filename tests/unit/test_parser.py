@@ -265,9 +265,26 @@ class TestGetSupportedFormats:
         assert ".epub" in formats
 
     def test_get_supported_formats_includes_html(self):
-        """Test that all 8 formats are supported currently."""
+        """Test that all formats are supported (documents + photos)."""
         formats = get_supported_formats()
-        assert formats == [".epub", ".pdf", ".html", ".htm", ".docx", ".md", ".markdown", ".txt"]
+        # Document formats
+        assert ".epub" in formats
+        assert ".pdf" in formats
+        assert ".html" in formats
+        assert ".htm" in formats
+        assert ".docx" in formats
+        assert ".md" in formats
+        assert ".markdown" in formats
+        assert ".txt" in formats
+        # Photo formats
+        assert ".jpg" in formats
+        assert ".jpeg" in formats
+        assert ".png" in formats
+        assert ".gif" in formats
+        assert ".webp" in formats
+        assert ".bmp" in formats
+        assert ".tiff" in formats
+        assert ".tif" in formats
 
 
 class TestIsFormatSupported:

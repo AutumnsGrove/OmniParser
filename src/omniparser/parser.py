@@ -16,6 +16,7 @@ from .parsers.html import HTMLParser
 from .parsers.pdf import parse_pdf
 from .parsers.markdown_parser import MarkdownParser
 from .parsers.docx import parse_docx
+from .parsers.photo import parse_photo, supports_photo_format
 from .parsers.text_parser import TextParser
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,7 @@ def parse_document(
     - DOCX (.docx)
     - Markdown (.md, .markdown)
     - Text (.txt, or no extension)
+    - Photo/Image (.jpg, .jpeg, .png, .gif, .webp, .bmp, .tiff, .tif)
 
     Args:
         file_path: Path to file to parse, or URL string (string or Path object).
@@ -152,11 +154,16 @@ def parse_document(
         text_parser = TextParser(options)
         return text_parser.parse(file_path)
 
+    # Photo/Image formats
+    elif supports_photo_format(file_path):
+        return parse_photo(file_path, **(options or {}))
+
     # Unknown format
     else:
         raise UnsupportedFormatError(
             f"Unsupported file format: {file_extension}. "
-            f"Supported formats: .epub, .pdf, .html, .htm, .docx, .md, .markdown, .txt"
+            f"Supported formats: .epub, .pdf, .html, .htm, .docx, .md, .markdown, .txt, "
+            f".jpg, .jpeg, .png, .gif, .webp, .bmp, .tiff, .tif"
         )
 
 
@@ -166,7 +173,25 @@ def get_supported_formats() -> list[str]:
     Returns:
         List of file extensions (e.g., ['.epub', '.pdf', '.html', '.htm', '.docx', '.md', '.markdown', '.txt']).
     """
-    return [".epub", ".pdf", ".html", ".htm", ".docx", ".md", ".markdown", ".txt"]
+    return [
+        ".epub",
+        ".pdf",
+        ".html",
+        ".htm",
+        ".docx",
+        ".md",
+        ".markdown",
+        ".txt",
+        # Photo formats
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".webp",
+        ".bmp",
+        ".tiff",
+        ".tif",
+    ]
 
 
 def is_format_supported(file_path: str | Path) -> bool:
