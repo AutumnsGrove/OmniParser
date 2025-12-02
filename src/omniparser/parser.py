@@ -2,12 +2,13 @@
 Main parser module for OmniParser.
 
 Provides the public parse_document() function that automatically detects
-file formats and routes to appropriate parsers.
+file formats and routes to appropriate parsers using the ParserRegistry.
 
 Performance Note:
     This module uses lazy imports to minimize startup time. Parser modules
-    are only imported when their format is actually requested. This reduces
-    initial load time by ~60% compared to eager imports.
+    are only imported when their format is actually requested. The registry
+    is initialized lazily on first use. This reduces initial load time by
+    ~60% compared to eager imports.
 """
 
 import logging
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
     from .parsers.html import HTMLParser
     from .parsers.markdown_parser import MarkdownParser
     from .parsers.text_parser import TextParser
+    from .base.registry import ParserInfo
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +32,30 @@ logger = logging.getLogger(__name__)
 # Lazy import cache to avoid re-importing
 _parser_cache: Dict[str, Any] = {}
 
+# Registry initialization flag for lazy loading
+_registry_initialized = False
+
 
 def _clear_parser_cache() -> None:
-    """Clear the parser cache. Used for testing."""
+    """Clear the parser cache and reset registry. Used for testing."""
+    global _registry_initialized
     _parser_cache.clear()
+    _registry_initialized = False
+
+
+def _ensure_registry_initialized() -> None:
+    """Initialize the registry if not already done.
+
+    This function provides lazy initialization of the parser registry,
+    preserving the performance benefits of lazy imports while enabling
+    the registry-based routing system.
+    """
+    global _registry_initialized
+    if not _registry_initialized:
+        from .base.registry import register_builtin_parsers
+
+        register_builtin_parsers()
+        _registry_initialized = True
 
 
 def parse_document(
@@ -108,46 +130,71 @@ def parse_document(
     if not file_path.is_file():
         raise FileReadError(f"Not a file: {file_path}")
 
-    # Detect format and route to appropriate parser
+    # Detect format and route to appropriate parser using registry
     file_extension = file_path.suffix.lower()
 
     logger.info(f"Parsing file: {file_path} (format: {file_extension})")
 
-    # EPUB format
-    if file_extension in [".epub"]:
-        return _parse_epub(file_path, options)
+    # Initialize registry lazily and use it for routing
+    _ensure_registry_initialized()
+    from .base.registry import registry
 
-    # PDF format
-    elif file_extension in [".pdf"]:
-        return _parse_pdf(file_path, options)
+    parser_info = registry.get_parser(file_path)
 
-    # DOCX format
-    elif file_extension in [".docx"]:
-        return _parse_docx(file_path, options)
+    if parser_info:
+        return _invoke_parser(parser_info, file_path, options)
 
-    # HTML format
-    elif file_extension in [".html", ".htm"]:
-        return _parse_html(file_path, options)
+    # Unknown format - query registry for supported formats
+    supported = registry.get_supported_extensions()
+    raise UnsupportedFormatError(
+        f"Unsupported file format: {file_extension}. "
+        f"Supported formats: {', '.join(supported)}"
+    )
 
-    # Markdown format
-    elif file_extension in [".md", ".markdown"]:
-        return _parse_markdown(file_path, options)
 
-    # Text format
-    elif file_extension in [".txt", ""]:
-        return _parse_text(file_path, options)
+def _invoke_parser(
+    parser_info: "ParserInfo", file_path: Path, options: Optional[Dict[str, Any]]
+) -> Document:
+    """Invoke a parser using the lazy import helpers.
 
-    # Photo/Image formats
-    elif _supports_photo(file_path):
-        return _parse_photo(file_path, options)
+    This function uses the internal lazy import helpers for parsing, which
+    enables proper test mocking and maintains backward compatibility.
 
-    # Unknown format
-    else:
-        raise UnsupportedFormatError(
-            f"Unsupported file format: {file_extension}. "
-            f"Supported formats: .epub, .pdf, .html, .htm, .docx, .md, .markdown, .txt, "
-            f".jpg, .jpeg, .png, .gif, .webp, .bmp, .tiff, .tif"
-        )
+    Args:
+        parser_info: ParserInfo from the registry.
+        file_path: Path to the file to parse.
+        options: Optional parser configuration.
+
+    Returns:
+        Parsed Document object.
+
+    Raises:
+        ValueError: If no parser implementation is available.
+    """
+    # Map parser names to lazy import helpers
+    parser_dispatch = {
+        "epub": _parse_epub,
+        "pdf": _parse_pdf,
+        "docx": _parse_docx,
+        "html": _parse_html,
+        "markdown": _parse_markdown,
+        "text": _parse_text,
+        "photo": _parse_photo,
+    }
+
+    parser_func = parser_dispatch.get(parser_info.name)
+    if parser_func:
+        return parser_func(file_path, options)
+
+    # Fallback for custom parsers registered at runtime
+    if parser_info.parser_class:
+        parser = parser_info.parser_class(options)
+        return parser.parse(file_path)
+
+    if parser_info.parse_func:
+        return parser_info.parse_func(file_path, options=options)
+
+    raise ValueError(f"Parser '{parser_info.name}' has no callable interface")
 
 
 # =============================================================================
@@ -159,6 +206,7 @@ def _parse_epub(file_path: Path, options: Optional[Dict[str, Any]]) -> Document:
     """Parse EPUB file with lazy import."""
     if "EPUBParser" not in _parser_cache:
         from .parsers.epub_parser import EPUBParser
+
         _parser_cache["EPUBParser"] = EPUBParser
 
     parser = _parser_cache["EPUBParser"](options)
@@ -169,6 +217,7 @@ def _parse_pdf(file_path: Path, options: Optional[Dict[str, Any]]) -> Document:
     """Parse PDF file with lazy import."""
     if "parse_pdf" not in _parser_cache:
         from .parsers.pdf import parse_pdf
+
         _parser_cache["parse_pdf"] = parse_pdf
 
     output_dir = None
@@ -182,6 +231,7 @@ def _parse_docx(file_path: Path, options: Optional[Dict[str, Any]]) -> Document:
     """Parse DOCX file with lazy import."""
     if "parse_docx" not in _parser_cache:
         from .parsers.docx import parse_docx
+
         _parser_cache["parse_docx"] = parse_docx
 
     # Extract options for parse_docx function
@@ -215,6 +265,7 @@ def _parse_html(
     """Parse HTML file or URL with lazy import."""
     if "HTMLParser" not in _parser_cache:
         from .parsers.html import HTMLParser
+
         _parser_cache["HTMLParser"] = HTMLParser
 
     parser = _parser_cache["HTMLParser"](options)
@@ -225,6 +276,7 @@ def _parse_markdown(file_path: Path, options: Optional[Dict[str, Any]]) -> Docum
     """Parse Markdown file with lazy import."""
     if "MarkdownParser" not in _parser_cache:
         from .parsers.markdown_parser import MarkdownParser
+
         _parser_cache["MarkdownParser"] = MarkdownParser
 
     parser = _parser_cache["MarkdownParser"](options)
@@ -235,6 +287,7 @@ def _parse_text(file_path: Path, options: Optional[Dict[str, Any]]) -> Document:
     """Parse text file with lazy import."""
     if "TextParser" not in _parser_cache:
         from .parsers.text_parser import TextParser
+
         _parser_cache["TextParser"] = TextParser
 
     parser = _parser_cache["TextParser"](options)
@@ -245,6 +298,7 @@ def _supports_photo(file_path: Path) -> bool:
     """Check if file is a photo with lazy import."""
     if "supports_photo_format" not in _parser_cache:
         from .parsers.photo import supports_photo_format
+
         _parser_cache["supports_photo_format"] = supports_photo_format
 
     return _parser_cache["supports_photo_format"](file_path)
@@ -254,6 +308,7 @@ def _parse_photo(file_path: Path, options: Optional[Dict[str, Any]]) -> Document
     """Parse photo file with lazy import."""
     if "parse_photo" not in _parser_cache:
         from .parsers.photo import parse_photo
+
         _parser_cache["parse_photo"] = parse_photo
 
     return _parser_cache["parse_photo"](file_path, **(options or {}))
@@ -262,32 +317,23 @@ def _parse_photo(file_path: Path, options: Optional[Dict[str, Any]]) -> Document
 def get_supported_formats() -> list[str]:
     """Get list of currently supported file formats.
 
+    Queries the ParserRegistry for all registered extensions, ensuring
+    the list stays in sync with available parsers automatically.
+
     Returns:
-        List of file extensions (e.g., ['.epub', '.pdf', '.html', '.htm', '.docx', '.md', '.markdown', '.txt']).
+        Sorted list of file extensions (e.g., ['.docx', '.epub', '.html', ...]).
     """
-    return [
-        ".epub",
-        ".pdf",
-        ".html",
-        ".htm",
-        ".docx",
-        ".md",
-        ".markdown",
-        ".txt",
-        # Photo formats
-        ".jpg",
-        ".jpeg",
-        ".png",
-        ".gif",
-        ".webp",
-        ".bmp",
-        ".tiff",
-        ".tif",
-    ]
+    _ensure_registry_initialized()
+    from .base.registry import registry
+
+    return registry.get_supported_extensions()
 
 
 def is_format_supported(file_path: str | Path) -> bool:
     """Check if a file format is supported.
+
+    Uses the ParserRegistry to determine support, which includes both
+    extension matching and custom supports_func checks for complex formats.
 
     Args:
         file_path: Path to check (string or Path object).
@@ -295,8 +341,7 @@ def is_format_supported(file_path: str | Path) -> bool:
     Returns:
         True if format is supported, False otherwise.
     """
-    if isinstance(file_path, str):
-        file_path = Path(file_path)
+    _ensure_registry_initialized()
+    from .base.registry import registry
 
-    extension = file_path.suffix.lower()
-    return extension in get_supported_formats()
+    return registry.is_supported(file_path)
